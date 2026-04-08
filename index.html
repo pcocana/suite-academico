@@ -443,8 +443,12 @@
         if (!/[a-z]/.test(t) && /[A-Z]/.test(t)) t = t.toLowerCase().replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
         if (a && !/[a-z]/.test(a) && /[A-Z]/.test(a)) a = a.toLowerCase().replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
         const yearMatch = f.match(/\b(19|20)\d{2}\b/); f = yearMatch ? yearMatch[0] : f;
-        const autoresProhibidos = ['PEARSON', 'CENGAGE', 'MCGRAW', 'WILEY', 'OXFORD', 'EDITORIAL', 'PRESS', 'EDUCATION'];
-        if (autoresProhibidos.some(bad => a.toUpperCase().includes(bad))) a = ""; 
+        // Solo borrar el autor si el campo completo ES una editorial (no si simplemente contiene la palabra)
+        // Un autor real tiene coma (Apellido, N.) o "&" entre varios. Una editorial no.
+        const autoresProhibidos = ['PEARSON', 'CENGAGE', 'MCGRAW-HILL', 'MCGRAW HILL', 'WILEY', 'OXFORD UNIVERSITY PRESS', 'EDITORIAL', 'PEARSON EDUCATION', 'ADDISON-WESLEY', 'PRENTICE HALL', 'PRENTICE-HALL'];
+        const aUpper = a.toUpperCase().trim();
+        const esEditorial = autoresProhibidos.some(bad => aUpper === bad || aUpper.startsWith(bad + ',') || aUpper.startsWith(bad + ' ') && !a.includes(','));
+        if (esEditorial) a = "";
         return { titulo: t, autor: a, editorial: e, anio: f };
     }
 
