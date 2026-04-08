@@ -480,55 +480,64 @@
                     data = { tituloArt: j2.titles?.[0]?.title, autor: j2.creators?.map(c=>c.name).join(' & '), anio: j2.publicationYear, revista: j2.publisher || 'arXiv', doi: `https://doi.org/${j2.doi}` };
                 }
             } else {
-                let r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
-                let j = await r.json();
-                if(!j.items) { r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${cleanIsbn}`); j = await r.json(); }
+                // Estrategia multicapa para ISBN:
+                // 1. OpenLibrary (mejor para ediciones latinoamericanas)
+                // 2. Google Books con restricción de idioma español
+                // 3. Google Books sin restricción (fallback general)
 
-                if(j.items) {
-                    const info = j.items[0].volumeInfo;
-                    tipo = 'libro';
-                    const rawData = limpiarDatosProfundo(info.title, info.authors?.join(' & '), info.publisher, info.publishedDate);
+                let rawData = null;
 
-                    // Si el autor quedó vacío (era una editorial), intentar OpenLibrary como fuente alternativa
-                    if (rawData.autor === "") {
-                        try {
-                            const rOL = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`);
-                            const jOL = await rOL.json();
-                            const key = `ISBN:${cleanIsbn}`;
-                            if(jOL[key]) {
-                                const infoOL = jOL[key];
-                                const olData = limpiarDatosProfundo(infoOL.title, infoOL.authors?.map(a=>a.name).join(' & '), infoOL.publishers?.[0]?.name, infoOL.publish_date);
-                                // Usar OpenLibrary solo si tiene mejor autor; de lo contrario conservar datos de Google Books
-                                data = {
-                                    titulo:    olData.titulo    || rawData.titulo,
-                                    autor:     olData.autor     || rawData.autor,
-                                    anio:      olData.anio      || rawData.anio,
-                                    editorial: olData.editorial || rawData.editorial
-                                };
-                            }
-                        } catch(e) {}
+                // --- Fuente 1: OpenLibrary ---
+                try {
+                    const rOL = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`);
+                    const jOL = await rOL.json();
+                    const key = `ISBN:${cleanIsbn}`;
+                    if (jOL[key]) {
+                        const infoOL = jOL[key];
+                        const olData = limpiarDatosProfundo(
+                            infoOL.title,
+                            infoOL.authors?.map(a => a.name).join(' & '),
+                            infoOL.publishers?.[0]?.name,
+                            infoOL.publish_date
+                        );
+                        if (olData.titulo) rawData = { fuente: 'OL', ...olData };
                     }
+                } catch(e) {}
 
-                    // Siempre tener un resultado aunque el autor esté vacío
-                    if (!data) data = { titulo: rawData.titulo, autor: rawData.autor, anio: rawData.anio, editorial: rawData.editorial };
-
-                } else {
-                    // Google Books no encontró nada — intentar directamente con OpenLibrary
+                // --- Fuente 2: Google Books con preferencia en español ---
+                if (!rawData || !rawData.autor) {
                     try {
-                        const rOL = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`);
-                        const jOL = await rOL.json();
-                        const key = `ISBN:${cleanIsbn}`;
-                        if(jOL[key]) {
-                            const infoOL = jOL[key];
-                            tipo = 'libro';
-                            const olData = limpiarDatosProfundo(infoOL.title, infoOL.authors?.map(a=>a.name).join(' & '), infoOL.publishers?.[0]?.name, infoOL.publish_date);
-                            data = { titulo: olData.titulo, autor: olData.autor, anio: olData.anio, editorial: olData.editorial };
-                        } else {
-                            throw new Error("ISBN no encontrado en ninguna fuente.");
+                        let rG = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}&langRestrict=es`);
+                        let jG = await rG.json();
+                        // Si no hay resultado en español, buscar sin restricción
+                        if (!jG.items) {
+                            rG = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
+                            jG = await rG.json();
                         }
-                    } catch(e) {
-                        throw new Error("ISBN no encontrado.");
-                    }
+                        if (jG.items) {
+                            // Preferir el resultado cuyo idioma sea español si hay varios
+                            const items = jG.items;
+                            const esItem = items.find(it => it.volumeInfo?.language === 'es') || items[0];
+                            const info = esItem.volumeInfo;
+                            const gData = limpiarDatosProfundo(info.title, info.authors?.join(' & '), info.publisher, info.publishedDate);
+                            // Usar Google Books si OpenLibrary no tenía autor o no tenía título
+                            if (!rawData) {
+                                rawData = { fuente: 'GB', ...gData };
+                            } else {
+                                // Combinar: preferir el título/autor con más información
+                                if (!rawData.autor && gData.autor) rawData.autor = gData.autor;
+                                if (!rawData.anio  && gData.anio)  rawData.anio  = gData.anio;
+                                if (!rawData.editorial && gData.editorial) rawData.editorial = gData.editorial;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                if (rawData && rawData.titulo) {
+                    tipo = 'libro';
+                    data = { titulo: rawData.titulo, autor: rawData.autor, anio: rawData.anio, editorial: rawData.editorial };
+                } else {
+                    throw new Error("ISBN no encontrado en ninguna fuente.");
                 }
             }
 
