@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suite Bibliográfica Académica v7.2 (Full Export)</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .main-container { max-width: 1250px; margin: 30px auto; background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); overflow: hidden; position: relative; }
+        
+        /* Encabezado */
+        .app-header { background: #2c3e50; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .app-title { margin: 0; font-size: 1.5rem; font-weight: 600; }
+
+        /* Pestañas */
+        .nav-tabs { background-color: #343a40; border-bottom: none; padding: 10px 10px 0 10px; margin-top: -1px; }
+        .nav-link { color: #d1d1d1; border: none; border-radius: 10px 10px 0 0; margin-right: 5px; padding: 12px 25px; font-weight: 600; }
+        .nav-link:hover { color: white; background-color: #495057; }
+        .nav-link.active { background-color: white; color: #0d6efd; border-bottom: 3px solid white; }
+        .tab-content { padding: 30px; }
+        
+        /* Estilos Gestor */
+        .req-star { color: red; font-weight: bold; }
+        .auto-fill-box { background-color: #e8f0fe; border: 1px solid #b3d7ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .btn-magic { background-color: #6f42c1; color: white; }
+        .btn-magic:hover { background-color: #5a32a3; color: white; }
+
+        /* Estilos Extractor e Importador */
+        .drop-zone { border: 2px dashed #0d6efd; background-color: #f8fbff; border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .drop-zone:hover { background-color: #e6f0ff; border-color: #0b5ed7; }
+        .drop-zone-import { border: 2px dashed #6610f2; background-color: #f3f0ff; }
+        .drop-zone-import:hover { background-color: #e0d8ff; border-color: #520dc2; }
+
+        .row-ok { background-color: #d1e7dd !important; } 
+        .row-warning { background-color: #fff3cd !important; } 
+        .row-error { background-color: #f8d7da !important; } 
+        
+        /* Modal Manual */
+        .modal-manual-body { max-height: 75vh; overflow-y: auto; text-align: left; padding: 30px; background: #fff; line-height: 1.6; }
+        .manual-step-box { background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 15px; margin-bottom: 15px; }
+        .step-number { font-weight: bold; color: #0d6efd; font-size: 1.1em; margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="app-header">
+        <h1 class="app-title">Suite Bibliográfica Académica v7.2</h1>
+        <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#manualModal">
+            📖 Manual de Uso
+        </button>
+    </div>
+
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="gestor-tab" data-bs-toggle="tab" data-bs-target="#gestor-pane" type="button">
+                🛠️ Gestor & Creador APA 7
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="extractor-tab" data-bs-toggle="tab" data-bs-target="#extractor-pane" type="button">
+                📂 Extractor Masivo (Auditoría)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="importador-tab" data-bs-toggle="tab" data-bs-target="#importador-pane" type="button">
+                📚 Importador Zotero/Mendeley
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        
+        <div class="tab-pane fade show active" id="gestor-pane">
+            <h3 class="mb-4 text-primary">Gestor Inteligente de Bibliografías</h3>
+            <div class="card mb-4 border-light bg-light">
+                <div class="card-body">
+                    <h5>1. Datos de Contexto</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="form-label">Carrera</label><input type="text" id="g_carrera" class="form-control" placeholder="Ej. Ingeniería"></div>
+                        <div class="col-md-4"><label class="form-label">Clave</label><input type="text" id="g_clave" class="form-control" placeholder="Ej. MAT-101"></div>
+                        <div class="col-md-4"><label class="form-label">Asignatura</label><input type="text" id="g_nombre" class="form-control" placeholder="Ej. Cálculo I"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auto-fill-box">
+                <label class="form-label fw-bold text-primary">✨ Autocompletado (Limpieza Profunda)</label>
+                <div class="input-group">
+                    <input type="text" id="inputMagic" class="form-control" placeholder="Pega DOI (ej: 10.1002/...) o ISBN">
+                    <button class="btn btn-magic" type="button" onclick="gestor_buscarMetadatos()" id="btnBuscar">🪄 Buscar y Rellenar</button>
+                </div>
+                <small class="text-muted">El sistema corrige automáticamente títulos en mayúsculas y elimina textos comerciales.</small>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Tipo de Recurso</label>
+                    <select id="tipoRecurso" class="form-select" onchange="gestor_actualizarFormulario()">
+                        <option value="">-- Seleccione --</option>
+                        <option value="libro">Libro Completo</option>
+                        <option value="capitulo">Capítulo de Libro</option>
+                        <option value="revista">Artículo Científico</option>
+                        <option value="conferencia">Conferencia</option>
+                        <option value="web">Sitio Web</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="ia">IA (ChatGPT)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Tipo Bibliografía</label>
+                    <select id="tipoBiblio" class="form-select">
+                        <option value="Básica">Básica</option>
+                        <option value="Complementaria">Complementaria</option>
+                    </select>
+                </div>
+                <div id="camposDinamicos" class="row g-3 mt-1"></div>
+                <div class="col-12 mt-3"><button class="btn btn-primary w-100" onclick="gestor_agregarReferencia()">+ Agregar a la Lista</button></div>
+            </div>
+
+            <div class="mt-4">
+                <h4>Referencias Cargadas</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped" id="tablaGestor">
+                        <thead class="table-dark"><tr><th>Tipo</th><th>Referencia APA 7</th><th>Acción</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button class="btn btn-success mt-3" onclick="gestor_exportarExcel()">📥 Descargar Excel (Gestor)</button>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="extractor-pane">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="text-success">Extractor Masivo de Bibliografía</h3>
+                <div>
+                    <span class="badge bg-secondary me-2" id="badgeArchivos">0 Archivos</span>
+                    <span class="badge bg-primary" id="badgeRefs">0 Refs Totales</span>
+                </div>
+            </div>
+
+            <div class="drop-zone" id="dropZone">
+                <h4>📂 Arrastra tus archivos aquí</h4>
+                <p class="text-muted">Soporta PDF, Word (.docx). <strong>Mejorado para detectar Nombres de Asignatura.</strong></p>
+                <input type="file" id="fileInput" multiple style="display:none">
+                <button class="btn btn-outline-primary btn-sm mt-2" onclick="document.getElementById('fileInput').click()">O selecciona archivos</button>
+            </div>
+
+            <div class="d-flex justify-content-between mt-3 mb-2">
+                <button class="btn btn-danger btn-sm" onclick="ext_reiniciarTodo()">🗑️ Limpiar Todo</button>
+                <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Descargar Excel Unificado</button>
+            </div>
+
+            <div class="table-responsive mt-3" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-hover table-bordered small">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th width="15%">Archivo</th>
+                            <th width="10%">Asignatura</th>
+                            <th width="10%">Tipo</th>
+                            <th width="40%">Referencia</th>
+                            <th width="25%">Validación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaExtractorBody">
+                        <tr><td colspan="5" class="text-center text-muted py-4">Esperando archivos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="statusLog" class="text-muted small mt-2">Listo para procesar.</div>
+        </div>
+
+        <div class="tab-pane fade" id="importador-pane">
+            <h3 class="mb-4" style="color: #6610f2;">Importador de Referencias Externas</h3>
+            <p class="text-muted">Sube archivos <strong>.RIS</strong> o <strong>.BIB</strong> de Zotero/Mendeley.</p>
+
+            <div class="drop-zone drop-zone-import" id="dropZoneImport">
+                <h4 style="color: #6610f2;">📚 Arrastra tu archivo .RIS o .BIB aquí</h4>
+                <input type="file" id="fileInputImport" accept=".ris,.bib" style="display:none">
+                <button class="btn btn-outline-secondary btn-sm mt-2" onclick="document.getElementById('fileInputImport').click()">Seleccionar Archivo</button>
+            </div>
+
+            <div class="mt-4" id="importResults" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5>Referencias Generadas (APA 7)</h5>
+                    <button class="btn btn-primary btn-sm" onclick="imp_copiarTodas()">📋 Copiar Todas al Portapapeles</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light"><tr><th>Referencia Lista</th><th width="100">Acción</th></tr></thead>
+                        <tbody id="tablaImportadorBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="manualModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">📖 Manual de Uso</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body modal-manual-body">
+                <h4 class="text-success mb-3">Tips Extractor</h4>
+                <p>El sistema intenta leer el nombre de la asignatura dentro del PDF. Si el PDF tiene un formato muy extraño y el sistema lee demasiado texto, automáticamente usará el <strong>Nombre del Archivo</strong> como nombre de la asignatura.</p>
+                <hr>
+                <h4 style="color: #6610f2;" class="mb-3">Tips Importador</h4>
+                <p>Puede exportar sus referencias de Zotero a Word o PDF desde aquí mismo para luego cargarlas en la pestaña "Extractor" y procesarlas junto con sus programas de estudio.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    let gestor_refs = [];
+    const gestor_campos = {
+        'libro': [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:'2020'},{id:'titulo',l:'Título',p:''},{id:'editorial',l:'Editorial',p:'',opt:true}],
+        'capitulo': [{id:'autor',l:'Autor Capítulo',p:''},{id:'anio',l:'Año',p:''},{id:'tituloCap',l:'Título Capítulo',p:''},{id:'editor',l:'Editores',p:'In J. Doe (Ed.)'},{id:'tituloLibro',l:'Título Libro',p:''},{id:'paginas',l:'Páginas',p:'pp. 20-30'}],
+        'revista': [{id:'autor',l:'Autor(es)',p:''},{id:'anio',l:'Año',p:''},{id:'tituloArt',l:'Título Artículo',p:''},{id:'revista',l:'Nombre Revista',p:''},{id:'volumen',l:'Vol.',p:'',opt:true},{id:'numero',l:'Núm.',p:'',opt:true},{id:'paginas',l:'Págs.',p:'',opt:true},{id:'doi',l:'DOI',p:'',opt:true}],
+        'web': [{id:'autor',l:'Autor/Org',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Web',p:''},{id:'sitio',l:'Sitio',p:''},{id:'url',l:'URL',p:''}],
+        'youtube': [{id:'autor',l:'Canal',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Video',p:''},{id:'url',l:'URL',p:''}],
+        'ia': [{id:'autor',l:'Autor',p:''},{id:'anio',l:'Año',p:''},{id:'modelo',l:'Modelo',p:'ChatGPT'},{id:'url',l:'URL',p:''}]
+    };
+
+    function gestor_actualizarFormulario() {
+        const tipo = document.getElementById('tipoRecurso').value;
+        const div = document.getElementById('camposDinamicos');
+        div.innerHTML = '';
+        if(!tipo || !gestor_campos[tipo]) return;
+        gestor_campos[tipo].forEach(c => {
+            div.innerHTML += `<div class="col-md-6"><label class="form-label">${c.l} ${c.opt?'<small class="text-muted">(Opcional)</small>':'<span class="req-star">*</span>'}</label><input type="text" class="form-control" id="g_${c.id}" placeholder="${c.p}"></div>`;
+        });
+    }
+
+    function limpiarDatosProfundo(titulo, autor, editorial, fecha) {
+        let t = titulo || ""; let a = autor || ""; let e = editorial || ""; let f = fecha || "";
+        t = t.replace(/\b(PKG|PGK|PACK|PACKAGE|&.*ACC.*|MYMATHLAB.*|ACCESS.*CARD|\+.*CD)\b/gi, ' ').trim();
+        t = t.replace(/^[\s&\-\+\.]+|[\s&\-\+\.]+$/g, '');
+        if (!/[a-z]/.test(t) && /[A-Z]/.test(t)) t = t.toLowerCase().replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
+        if (a && !/[a-z]/.test(a) && /[A-Z]/.test(a)) a = a.toLowerCase().replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
+        const yearMatch = f.match(/\b(19|20)\d{2}\b/); f = yearMatch ? yearMatch[0] : f;
+        const autoresProhibidos = ['PEARSON', 'CENGAGE', 'MCGRAW', 'WILEY', 'OXFORD', 'EDITORIAL', 'PRESS', 'EDUCATION'];
+        if (autoresProhibidos.some(bad => a.toUpperCase().includes(bad))) a = ""; 
+        return { titulo: t, autor: a, editorial: e, anio: f };
+    }
+
+    async function gestor_buscarMetadatos() {
+        const input = document.getElementById('inputMagic').value.trim();
+        const btn = document.getElementById('btnBuscar');
+        if(!input) return alert("Ingresa DOI o ISBN");
+        
+        btn.innerHTML = '⌛ Buscando...'; btn.disabled = true;
+        try {
+            const isDoi = input.includes('10.') && input.includes('/');
+            const clean = input.replace(/https?:\/\/(dx\.)?doi\.org\//, '').trim();
+            const cleanIsbn = input.replace(/[-\s]/g, '');
+            let data = null, tipo = '';
+
+            if(isDoi) {
+                try {
+                    const r = await fetch(`https://api.crossref.org/works/${clean}`);
+                    if(r.ok) {
+                        const j = (await r.json()).message;
+                        tipo = 'revista';
+                        data = { autor: j.author?.map(a=>`${a.family}, ${a.given?.[0]}.`).join(' & '), anio: j.published?.['date-parts']?.[0]?.[0], tituloArt: j.title?.[0], revista: j['container-title']?.[0], volumen: j.volume, numero: j.issue, paginas: j.page, doi: `https://doi.org/${j.DOI}` };
+                    } else throw new Error();
+                } catch(e) {
+                    const r2 = await fetch(`https://api.datacite.org/dois/${clean}`);
+                    if(!r2.ok) throw new Error("No encontrado");
+                    const j2 = (await r2.json()).data.attributes;
+                    tipo = 'revista';
+                    data = { tituloArt: j2.titles?.[0]?.title, autor: j2.creators?.map(c=>c.name).join(' & '), anio: j2.publicationYear, revista: j2.publisher || 'arXiv', doi: `https://doi.org/${j2.doi}` };
+                }
+            } else {
+                let r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
+                let j = await r.json();
+                if(!j.items) { r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${cleanIsbn}`); j = await r.json(); }
+
+                if(j.items) {
+                    const info = j.items[0].volumeInfo;
+                    tipo = 'libro';
+                    const rawData = limpiarDatosProfundo(info.title, info.authors?.join(' & '), info.publisher, info.publishedDate);
+                    if (rawData.autor === "") {
+                         try {
+                            const rOL = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`);
+                            const jOL = await rOL.json();
+                            const key = `ISBN:${cleanIsbn}`;
+                            if(jOL[key]) {
+                                const infoOL = jOL[key];
+                                const olData = limpiarDatosProfundo(infoOL.title, infoOL.authors?.map(a=>a.name).join(' & '), infoOL.publishers?.[0]?.name, infoOL.publish_date);
+                                data = { titulo: olData.titulo, autor: olData.autor, anio: olData.anio, editorial: olData.editorial };
+                            }
+                         } catch(e) {}
+                    }
+                    if (!data) data = { titulo: rawData.titulo, autor: rawData.autor, anio: rawData.anio, editorial: rawData.editorial };
+
+                } else {
+                     throw new Error("ISBN no encontrado.");
+                }
+            }
+
+            if(data) {
+                document.getElementById('tipoRecurso').value = tipo;
+                gestor_actualizarFormulario();
+                setTimeout(() => { 
+                    for(let k in data) { 
+                        const el = document.getElementById(`g_${k}`); 
+                        if(el) {
+                            if(k === 'titulo' || k === 'tituloArt') el.value = limpiarDatosProfundo(data[k], '', '', '').titulo;
+                            else if(k === 'autor') el.value = limpiarDatosProfundo('', data[k], '', '').autor;
+                            else el.value = data[k] || ''; 
+                        }
+                    } 
+                    if(data.autor === "") alert("⚠️ ATENCIÓN: El autor se ha dejado en blanco porque detectamos una editorial.");
+                    else alert("✅ ¡Datos encontrados!"); 
+                }, 100);
+            }
+        } catch(e) { alert("Error: " + e.message); }
+        finally { btn.innerHTML = '🪄 Buscar y Rellenar'; btn.disabled = false; }
+    }
+
+    function gestor_agregarReferencia() {
+        const tipo = document.getElementById('tipoRecurso').value;
+        if(!tipo) return;
+        const getVal = (id) => { const el = document.getElementById(`g_${id}`); return el ? el.value.trim() : ''; };
+        let ref = '';
+        if(tipo==='libro') ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>. ${getVal('editorial')}.`;
+        else if(tipo==='revista') ref = `${getVal('autor')} (${getVal('anio')}). ${getVal('tituloArt')}. <i>${getVal('revista')}</i>. ${getVal('doi')}`;
+        else ref = `${getVal('autor')} (${getVal('fecha')||getVal('anio')}). <i>${getVal('titulo')||getVal('tituloCap')}</i>. ${getVal('url')}`;
+        
+        ref = ref.trim().replace(/\s*\.+\s*\.+/g, '.');
+        if(!ref.endsWith('.')) ref += '.';
+        if(ref.startsWith(" (")) ref = ref.substring(1); 
+        
+        gestor_refs.push({ "Carrera":document.getElementById('g_carrera').value, "Clave":document.getElementById('g_clave').value, "Asignatura":document.getElementById('g_nombre').value, "Tipo":document.getElementById('tipoBiblio').value, "Referencia": ref });
+        gestor_renderTabla();
+        document.getElementById('camposDinamicos').innerHTML='';
+        document.getElementById('tipoRecurso').value='';
+    }
+
+    function gestor_renderTabla() {
+        const tbody = document.querySelector('#tablaGestor tbody');
+        tbody.innerHTML = '';
+        gestor_refs.forEach((r, i) => tbody.innerHTML += `<tr><td>${r.Tipo}</td><td>${r.Referencia}</td><td><button class="btn btn-sm btn-danger" onclick="gestor_eliminar(${i})">X</button></td></tr>`);
+    }
+    function gestor_eliminar(i) { gestor_refs.splice(i,1); gestor_renderTabla(); }
+    
+    function gestor_exportarExcel() {
+        if(!gestor_refs.length) return alert("Sin datos");
+        const datosLimpios = gestor_refs.map(r => ({
+            "Carrera": r.Carrera,
+            "Clave": r.Clave,
+            "Asignatura": r.Asignatura,
+            "Tipo": r.Tipo,
+            "Referencia": r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.')
+        }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datosLimpios), "Bibliografía");
+        XLSX.writeFile(wb, "Bibliografia_Gestor.xlsx");
+    }
+</script>
+
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    
+    let ext_datos = []; 
+    let ext_filesProcesados = new Set();
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#e6f0ff'; });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#f8fbff'; });
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.backgroundColor='#f8fbff'; ext_procesarArchivos(e.dataTransfer.files); });
+    fileInput.addEventListener('change', (e) => ext_procesarArchivos(e.target.files));
+
+    function ext_procesarArchivos(files) {
+        document.getElementById('statusLog').innerText = `Procesando ${files.length} archivos...`;
+        Array.from(files).forEach(file => {
+            if (ext_filesProcesados.has(file.name)) return;
+            ext_filesProcesados.add(file.name);
+            const reader = new FileReader();
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'pdf') {
+                reader.onload = async function() {
+                    try {
+                        const typedarray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        let fullText = "";
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                        }
+                        extraerYAcumular(fullText, file.name);
+                    } catch (e) { console.error(e); }
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (ext === 'docx') {
+                reader.onload = async function() {
+                    try {
+                        const result = await mammoth.extractRawText({ arrayBuffer: this.result });
+                        extraerYAcumular(result.value, file.name);
+                    } catch (e) { console.error(e); }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+    }
+
+    // FUNCIÓN CORE CORREGIDA
+    function extraerYAcumular(texto, filename) {
+        texto = texto.replace(/\r/g, '\n').replace(/\t/g, ' ');
+        let carrera = "No detectado"; let clave = "S/D"; let nombre = "No detectado";
+        
+        const matchClave = texto.match(/(?:Sigla|Código|Asignatura|Clave)[:\s,]+([A-Z]{3}\s*\d{3,5})/i);
+        if (matchClave) clave = matchClave[1].trim();
+
+        const matchCarrera = texto.match(/(?:Carrera|Programa)[:\s]+([^\n\r]+)/i);
+        if (matchCarrera) carrera = matchCarrera[1].trim();
+
+        // DETECCIÓN DE NOMBRE
+        const matchNombre = texto.match(/(?:Nombre de la asignatura|Asignatura|Nombre del Curso|Nombre del curso)[:\s,"]+([^\n\r]+?)(?=\n|\r|Descripción|Objetivos|Sigla|Código|Créditos|$|")/i);
+        if (matchNombre) {
+            nombre = matchNombre[1].trim().replace(/^"|"$/g, '');
+        }
+
+        // FAILSAFE NOMBRE LARGO
+        if (nombre.length > 100 || nombre === "No detectado") {
+            nombre = filename.replace(/\.(pdf|docx)$/i, '').toUpperCase();
+        }
+
+        const idxBiblio = texto.search(/(?:Bibliografía|Referencias|Textos Guías)/i);
+        if (idxBiblio === -1) return;
+        
+        const textoBiblio = texto.substring(idxBiblio);
+        let idxBasica = textoBiblio.search(/(?:Bibliografía\s+Obligatoria|Bibliografía\s+Básica|Básica|Obligatoria)/i);
+        let idxComp = textoBiblio.search(/(?:Bibliografía\s+Complementaria|Complementaria)/i);
+        
+        if (idxBasica === -1) idxBasica = 0;
+        let bloqueBasica = ""; let bloqueComp = "";
+        
+        if (idxComp !== -1 && idxComp > idxBasica) {
+            bloqueBasica = textoBiblio.substring(idxBasica, idxComp);
+            bloqueComp = textoBiblio.substring(idxComp);
+        } else {
+            bloqueBasica = textoBiblio.substring(idxBasica);
+        }
+
+        const refsBasicas = segmentarReferencias(bloqueBasica);
+        const refsComp = segmentarReferencias(bloqueComp);
+        
+        const agregar = (lista, tipo) => {
+            lista.forEach(r => {
+                const refLimpia = r.trim().replace(/\s*\.+\s*\.+/g, '.');
+                ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo, ref: refLimpia, status: validarCalidad(refLimpia) });
+            });
+        };
+        
+        agregar(refsBasicas, 'Básica');
+        agregar(refsComp, 'Complementaria');
+        ext_updateView();
+    }
+
+    // VERSIÓN DEFINITIVA: ESTRATEGIA DE APLANADO
+    function segmentarReferencias(bloque) {
+        if (!bloque) return [];
+
+        // 1. ESTRATEGIA DE APLANADO: Eliminamos todos los saltos de línea
+        let limpio = bloque.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ');
+
+        // 2. Limpieza de títulos
+        limpio = limpio.replace(/(Bibliografía|Referencias|Obligatoria|Básica|Complementaria|Textos Guías)/gi, '').replace(/"/g, ''); 
+
+        // 3. INYECTAR SEPARADORES (###SPLIT###)
+        // Patrón A: Listas numeradas
+        limpio = limpio.replace(/\s(\d{1,2}[.\-\)]+\s+)/g, '###SPLIT###$1');
+        // Patrón B: Citas tipo "[1]"
+        limpio = limpio.replace(/\s(\[\d+\])/g, '###SPLIT###$1');
+        // Patrón C: Viñetas
+        limpio = limpio.replace(/\s([•\-])\s+/g, '###SPLIT###$1 ');
+        // Patrón D: Autores APA si no hay números
+        limpio = limpio.replace(/\.\s+([A-Z][a-záéíóúñ]+\s*,\s+[A-Z]\.)/g, '.###SPLIT###$1');
+
+        // 4. DIVIDIR Y LIMPIAR
+        return limpio.split('###SPLIT###').map(x => x.trim()).filter(x => {
+            if (x.length < 10) return false; 
+            if (/^\d+$/.test(x)) return false; 
+            if (x.length < 40 && !/\d{4}/.test(x) && !/s\.f/.test(x)) return false; 
+            return true;
+        });
+    }
+
+    function validarCalidad(ref) {
+        if (ref.match(/EUR\s*\d+/) || ref.match(/US\$\d+/) || ref.includes("PLIT")) return { level: 'error', msg: "⚠️ Precio/Basura" };
+        const tieneAnio = /\b(19|20)\d{2}\b|\(s\.?f\.?\)/.test(ref);
+        if (!tieneAnio) return { level: 'warning', msg: "⚠️ Falta Año" };
+        if (/^\s*\(?\d{4}\)?/.test(ref) || /^\s*:/.test(ref) || /^\s*-/.test(ref)) return { level: 'warning', msg: "⚠️ ¿Falta Autor?" };
+        return { level: 'success', msg: "✅ OK" };
+    }
+
+    function ext_updateView() {
+        const tbody = document.getElementById('tablaExtractorBody');
+        if(ext_datos.length) tbody.innerHTML = '';
+        else tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Esperando datos...</td></tr>';
+        ext_datos.slice(-50).forEach(d => {
+            let clase = d.status.level === 'success' ? 'row-ok' : (d.status.level === 'warning' ? 'row-warning' : 'row-error');
+            tbody.innerHTML += `<tr class="${clase}"><td><small>${d.archivo}</small></td><td>${d.nombre}</td><td><span class="badge bg-secondary">${d.tipo}</span></td><td><small>${d.ref}</small></td><td><small>${d.status.msg}</small></td></tr>`;
+        });
+        document.getElementById('badgeArchivos').innerText = ext_filesProcesados.size + " Archivos";
+        document.getElementById('badgeRefs').innerText = ext_datos.length + " Refs";
+        document.getElementById('btnDescargarExt').classList.remove('disabled');
+        document.getElementById('statusLog').innerText = "Procesamiento completo.";
+    }
+
+    function ext_reiniciarTodo() {
+        if(!confirm("¿Borrar todo?")) return;
+        ext_datos=[]; ext_filesProcesados.clear();
+        document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="5" class="text-center text-muted">Esperando...</td></tr>';
+        document.getElementById('badgeArchivos').innerText="0"; document.getElementById('badgeRefs').innerText="0";
+    }
+
+    function ext_exportarExcel() {
+        if(!ext_datos.length) return;
+        const datos = [["Archivo", "Carrera", "Clave", "Asignatura", "Tipo", "Referencia", "Estado"]];
+        ext_datos.forEach(d => datos.push([d.archivo, d.carrera, d.clave, d.nombre, d.tipo, d.ref, d.status.msg]));
+        const ws = XLSX.utils.aoa_to_sheet(datos);
+        ws['!cols'] = [{wch:20}, {wch:15}, {wch:10}, {wch:25}, {wch:15}, {wch:80}, {wch:15}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Reporte_Unificado");
+        XLSX.writeFile(wb, "Reporte_Bibliografico.xlsx");
+    }
+</script>
+
+<script>
+    let imp_referencias = [];
+    const dropZoneImport = document.getElementById('dropZoneImport');
+    const fileInputImport = document.getElementById('fileInputImport');
+
+    dropZoneImport.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#e0d8ff'; });
+    dropZoneImport.addEventListener('dragleave', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#f3f0ff'; });
+    dropZoneImport.addEventListener('drop', (e) => { e.preventDefault(); dropZoneImport.style.backgroundColor='#f3f0ff'; imp_procesarArchivo(e.dataTransfer.files[0]); });
+    fileInputImport.addEventListener('change', (e) => imp_procesarArchivo(e.target.files[0]));
+
+    function imp_procesarArchivo(file) {
+        if(!file) return;
+        const reader = new FileReader();
+        const ext = file.name.split('.').pop().toLowerCase();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            if(ext === 'ris') imp_referencias = imp_parseRIS(content);
+            else if(ext === 'bib') imp_referencias = imp_parseBibTeX(content);
+            else { alert("Formato no soportado. Use .RIS o .BIB"); return; }
+            imp_renderTabla();
+        };
+        reader.readAsText(file);
+    }
+
+    function imp_parseRIS(content) {
+        const entries = content.split(/ER\s{1,2}-/);
+        return entries.map(entry => {
+            if(!entry.trim()) return null;
+            const getField = (tag) => {
+                const match = entry.match(new RegExp(`^${tag}\\s{1,2}-\\s+(.*)$`, "m"));
+                return match ? match[1].trim() : null;
+            };
+            const authors = [];
+            const auRegex = /^AU\s{1,2}-\s+(.*)$/gm;
+            let m; while((m = auRegex.exec(entry)) !== null) authors.push(m[1]);
+            return { titulo: getField('TI') || getField('T1') || "Sin título", autores: authors, anio: (getField('PY') || getField('Y1') || "s.f.").substring(0,4), fuente: getField('PB') || getField('JA') || "" };
+        }).filter(r => r !== null);
+    }
+
+    function imp_parseBibTeX(content) {
+        const rawEntries = content.split('@');
+        return rawEntries.map(entry => {
+            if (!entry.trim() || entry.trim().startsWith('comment')) return null;
+            const extract = (key) => { const match = entry.match(new RegExp(`${key}\\s*=\\s*[{"'](.*?)["'}]`, "i")); return match ? match[1] : null; };
+            const autoresStr = extract('author');
+            return { titulo: extract('title') || "Sin título", autores: autoresStr ? autoresStr.split(' and ').map(a => a.trim()) : [], anio: extract('year') || "s.f.", fuente: extract('journal') || extract('publisher') || "" };
+        }).filter(r => r !== null);
+    }
+
+    function imp_generarAPA(ref) {
+        const autoresFmt = ref.autores.map(a => {
+            if(a.includes(',')) { const p = a.split(','); return `${p[0]}, ${p[1].trim().charAt(0)}.`; }
+            return a;
+        }).join(' & ');
+        return `${autoresFmt} (${ref.anio}). <i>${ref.titulo}</i>. ${ref.fuente}.`;
+    }
+
+    function imp_renderTabla() {
+        const tbody = document.getElementById('tablaImportadorBody');
+        const resultsDiv = document.getElementById('importResults');
+        tbody.innerHTML = '';
+        
+        // Limpiamos botones previos si existen
+        const btnContainer = document.getElementById('imp-export-buttons');
+        if(btnContainer) btnContainer.remove();
+
+        if(imp_referencias.length > 0) {
+            resultsDiv.style.display = 'block';
+            
+            // 1. CREAR BOTONES DE DESCARGA
+            const divBotones = document.createElement('div');
+            divBotones.id = 'imp-export-buttons';
+            divBotones.className = 'd-flex gap-2 mb-3 justify-content-end';
+            divBotones.innerHTML = `
+                <button class="btn btn-primary" onclick="imp_descargarWord()">📄 Descargar Word (para Extractor)</button>
+                <button class="btn btn-danger" onclick="imp_descargarPDF()">📕 Descargar PDF (para Extractor)</button>
+            `;
+            // Insertar botones antes de la tabla
+            const tableContainer = document.querySelector('#importResults .table-responsive');
+            tableContainer.parentNode.insertBefore(divBotones, tableContainer);
+
+            // 2. LLENAR TABLA
+            imp_referencias.forEach((ref, idx) => {
+                const cita = imp_generarAPA(ref);
+                const citaClean = cita.replace(/<i>|<\/i>/g, '');
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${cita}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="imp_copiar('${citaClean.replace(/'/g, "\\'")}')">Copiar</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+    }
+
+    function imp_copiar(texto) { navigator.clipboard.writeText(texto); alert("Copiado!"); }
+    
+    function imp_copiarTodas() { 
+        const todas = imp_referencias.map(r => imp_generarAPA(r).replace(/<i>|<\/i>/g, '')).join('\n\n'); 
+        navigator.clipboard.writeText(todas); 
+        alert("¡Copiado!"); 
+    }
+
+    function imp_descargarWord() {
+        if(imp_referencias.length === 0) return;
+        const nombreAsignatura = prompt("Nombre de la Asignatura (para el encabezado):", "Asignatura Importada");
+        if(nombreAsignatura === null) return;
+
+        let contenido = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head><meta charset='utf-8'><title>Bibliografía Exportada</title></head>
+            <body>
+            <h1>${nombreAsignatura}</h1>
+            <h2>Bibliografía</h2>
+            <ul>
+        `;
+        imp_referencias.forEach(ref => { contenido += `<li style="margin-bottom: 10px;">${imp_generarAPA(ref)}</li>`; });
+        contenido += "</ul></body></html>";
+
+        const blob = new Blob(['\ufeff', contenido], { type: 'application/msword' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${nombreAsignatura}_Referencias.doc`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    async function imp_descargarPDF() {
+        if(imp_referencias.length === 0) return;
+        const nombreAsignatura = prompt("Nombre de la Asignatura (para el encabezado):", "Asignatura Importada");
+        if(nombreAsignatura === null) return;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFont("times", "bold");
+        doc.setFontSize(16);
+        doc.text(nombreAsignatura, 10, 20);
+        doc.setFontSize(14);
+        doc.text("Bibliografía", 10, 30);
+        doc.setFont("times", "normal");
+        doc.setFontSize(12);
+
+        let y = 40; 
+        const margin = 10;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const maxWidth = pageWidth - (margin * 2);
+
+        imp_referencias.forEach(ref => {
+            let texto = imp_generarAPA(ref).replace(/<i>/g, '').replace(/<\/i>/g, '');
+            const lineas = doc.splitTextToSize(texto, maxWidth);
+            if (y + (lineas.length * 7) > doc.internal.pageSize.getHeight() - 10) {
+                doc.addPage(); y = 20;
+            }
+            doc.text(lineas, margin, y);
+            y += (lineas.length * 5) + 5;
+        });
+        doc.save(`${nombreAsignatura}_Referencias.pdf`);
+    }
+</script>
+
+</body>
+</html>
