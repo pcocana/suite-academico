@@ -108,6 +108,14 @@
                     <button class="btn btn-magic" type="button" onclick="gestor_buscarMetadatos()" id="btnBuscar">🪄 Buscar y Rellenar</button>
                 </div>
                 <small class="text-muted">El sistema corrige automáticamente títulos en mayúsculas y elimina textos comerciales.</small>
+                <!-- Historial de búsquedas -->
+                <div id="historialBox" style="display:none; margin-top:10px;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="fw-bold text-secondary">🕓 Historial de búsquedas</small>
+                        <button class="btn btn-link btn-sm text-danger p-0" onclick="gestor_limpiarHistorial()">Limpiar historial</button>
+                    </div>
+                    <div id="historialLista" class="d-flex flex-wrap gap-2"></div>
+                </div>
             </div>
 
             <div class="row g-3">
@@ -139,7 +147,7 @@
                 <h4>Referencias Cargadas</h4>
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped" id="tablaGestor">
-                        <thead class="table-dark"><tr><th>Tipo</th><th>Referencia APA 7</th><th>Acción</th></tr></thead>
+                        <thead class="table-dark"><tr><th>Tipo</th><th>Referencia APA 7</th><th>ISBN</th><th>Acción</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -410,7 +418,7 @@
 <script>
     let gestor_refs = [];
     const gestor_campos = {
-        'libro': [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:'2020'},{id:'titulo',l:'Título',p:''},{id:'editorial',l:'Editorial',p:'',opt:true}],
+        'libro': [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:'2020'},{id:'titulo',l:'Título',p:''},{id:'editorial',l:'Editorial',p:'',opt:true},{id:'isbn',l:'ISBN',p:'Ej. 9781292027661',opt:true}],
         'capitulo': [{id:'autor',l:'Autor Capítulo',p:''},{id:'anio',l:'Año',p:''},{id:'tituloCap',l:'Título Capítulo',p:''},{id:'editor',l:'Editores',p:'In J. Doe (Ed.)'},{id:'tituloLibro',l:'Título Libro',p:''},{id:'paginas',l:'Páginas',p:'pp. 20-30'}],
         'revista': [{id:'autor',l:'Autor(es)',p:''},{id:'anio',l:'Año',p:''},{id:'tituloArt',l:'Título Artículo',p:''},{id:'revista',l:'Nombre Revista',p:''},{id:'volumen',l:'Vol.',p:'',opt:true},{id:'numero',l:'Núm.',p:'',opt:true},{id:'paginas',l:'Págs.',p:'',opt:true},{id:'doi',l:'DOI',p:'',opt:true}],
         'web': [{id:'autor',l:'Autor/Org',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Web',p:''},{id:'sitio',l:'Sitio',p:''},{id:'url',l:'URL',p:''}],
@@ -531,7 +539,15 @@
                             else if(k === 'autor') el.value = limpiarDatosProfundo('', data[k], '', '').autor;
                             else el.value = data[k] || ''; 
                         }
-                    } 
+                    }
+                    // Rellenar ISBN automáticamente si vino de búsqueda por ISBN
+                    if (!isDoi) {
+                        const isbnEl = document.getElementById('g_isbn');
+                        if (isbnEl) isbnEl.value = cleanIsbn;
+                    }
+                    // Guardar en historial
+                    const tituloEncontrado = data.titulo || data.tituloArt || 'Sin título';
+                    gestor_agregarHistorial(input, tituloEncontrado);
                     if(data.autor === "") alert("⚠️ ATENCIÓN: El autor se ha dejado en blanco porque detectamos una editorial.");
                     else alert("✅ ¡Datos encontrados!"); 
                 }, 100);
@@ -563,9 +579,13 @@
         
         ref = ref.trim().replace(/\s*\.+\s*\.+/g, '.');
         if(!ref.endsWith('.')) ref += '.';
-        if(ref.startsWith(" (")) ref = ref.substring(1); 
+        if(ref.startsWith(" (")) ref = ref.substring(1);
+
+        // ISBN: solo se captura si el campo existe (tipo libro con ISBN ingresado)
+        const isbnEl = document.getElementById('g_isbn');
+        const isbn = isbnEl ? isbnEl.value.trim() : '';
         
-        gestor_refs.push({ "Carrera":document.getElementById('g_carrera').value, "Clave":document.getElementById('g_clave').value, "Asignatura":document.getElementById('g_nombre').value, "Tipo":document.getElementById('tipoBiblio').value, "Referencia": ref });
+        gestor_refs.push({ "Carrera":document.getElementById('g_carrera').value, "Clave":document.getElementById('g_clave').value, "Asignatura":document.getElementById('g_nombre').value, "Tipo":document.getElementById('tipoBiblio').value, "Referencia": ref, "ISBN": isbn });
         gestor_guardarStorage();
         gestor_renderTabla();
         document.getElementById('camposDinamicos').innerHTML='';
@@ -575,18 +595,68 @@
     function gestor_renderTabla() {
         const tbody = document.querySelector('#tablaGestor tbody');
         tbody.innerHTML = '';
-        gestor_refs.forEach((r, i) => tbody.innerHTML += `<tr><td>${r.Tipo}</td><td>${r.Referencia}</td><td><button class="btn btn-sm btn-danger" onclick="gestor_eliminar(${i})">X</button></td></tr>`);
+        gestor_refs.forEach((r, i) => tbody.innerHTML += `
+            <tr>
+                <td>${r.Tipo}</td>
+                <td>${r.Referencia}</td>
+                <td><small class="text-muted">${r.ISBN || '—'}</small></td>
+                <td><button class="btn btn-sm btn-danger" onclick="gestor_eliminar(${i})">X</button></td>
+            </tr>`);
     }
     function gestor_eliminar(i) { gestor_refs.splice(i,1); gestor_guardarStorage(); gestor_renderTabla(); }
     
+    // --- Historial de búsquedas ---
+    let gestor_historial = [];
+
+    function gestor_cargarHistorial() {
+        try {
+            const saved = localStorage.getItem('gestor_historial');
+            if (saved) { gestor_historial = JSON.parse(saved); gestor_renderHistorial(); }
+        } catch(e) {}
+    }
+    function gestor_guardarHistorial() {
+        try { localStorage.setItem('gestor_historial', JSON.stringify(gestor_historial)); } catch(e) {}
+    }
+    function gestor_agregarHistorial(query, titulo) {
+        // Evitar duplicado exacto del mismo query
+        gestor_historial = gestor_historial.filter(h => h.query !== query);
+        gestor_historial.unshift({ query, titulo, fecha: new Date().toLocaleDateString('es-CL') });
+        if (gestor_historial.length > 20) gestor_historial.pop(); // máximo 20 entradas
+        gestor_guardarHistorial();
+        gestor_renderHistorial();
+    }
+    function gestor_renderHistorial() {
+        const box = document.getElementById('historialBox');
+        const lista = document.getElementById('historialLista');
+        if (!gestor_historial.length) { box.style.display = 'none'; return; }
+        box.style.display = 'block';
+        lista.innerHTML = '';
+        gestor_historial.forEach(h => {
+            lista.innerHTML += `
+                <span class="badge rounded-pill text-bg-light border" style="cursor:pointer; font-weight:400; font-size:.8rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                    title="${h.titulo} — ${h.fecha}"
+                    onclick="document.getElementById('inputMagic').value='${h.query.replace(/'/g,"\\'")}'; gestor_buscarMetadatos();">
+                    🔍 ${h.query} <span style="color:#888;">· ${h.titulo.substring(0,30)}${h.titulo.length>30?'…':''}</span>
+                </span>`;
+        });
+    }
+    function gestor_limpiarHistorial() {
+        if (!confirm('¿Limpiar todo el historial de búsquedas?')) return;
+        gestor_historial = [];
+        gestor_guardarHistorial();
+        gestor_renderHistorial();
+    }
+    document.addEventListener('DOMContentLoaded', gestor_cargarHistorial);
+
     function gestor_exportarExcel() {
         if(!gestor_refs.length) return alert("Sin datos");
         const datosLimpios = gestor_refs.map(r => ({
-            "Carrera": r.Carrera,
-            "Clave": r.Clave,
+            "Carrera":    r.Carrera,
+            "Clave":      r.Clave,
             "Asignatura": r.Asignatura,
-            "Tipo": r.Tipo,
-            "Referencia": r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.')
+            "Tipo":       r.Tipo,
+            "Referencia": r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.'),
+            "ISBN":       r.ISBN || ''
         }));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datosLimpios), "Bibliografía");
