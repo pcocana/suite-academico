@@ -561,8 +561,13 @@
                     // Guardar en historial
                     const tituloEncontrado = data.titulo || data.tituloArt || 'Sin título';
                     gestor_agregarHistorial(input, tituloEncontrado);
-                    if(data.autor === "") alert("⚠️ ATENCIÓN: El autor se ha dejado en blanco porque detectamos una editorial.");
-                    else alert("✅ ¡Datos encontrados!"); 
+                    // Revisar el campo autor tal como quedó en pantalla (después de limpiar)
+                    const autorEnPantalla = document.getElementById('g_autor')?.value || '';
+                    if (autorEnPantalla === '') {
+                        alert("⚠️ El autor no se encontró en las fuentes consultadas. Por favor ingrésalo manualmente.");
+                    } else {
+                        alert("✅ ¡Datos encontrados!");
+                    }
                 }, 100);
             }
         } catch(e) { alert("Error: " + e.message); }
