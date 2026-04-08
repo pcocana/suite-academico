@@ -79,6 +79,11 @@
                 ✍️ Constructor Manual
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="disponibilidad-tab" data-bs-toggle="tab" data-bs-target="#disponibilidad-pane" type="button">
+                🔍 Disponibilidad PUCV
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content">
@@ -275,6 +280,109 @@
             </div>
         </div>
         <!-- FIN Constructor Manual -->
+
+        <!-- PANEL DE DISPONIBILIDAD PUCV -->
+        <div class="tab-pane fade" id="disponibilidad-pane">
+            <h3 class="mb-1" style="color:#0d6efd;">🔍 Panel de Disponibilidad PUCV</h3>
+            <p class="text-muted mb-4">Consulta si los libros de una bibliografía están en el catálogo de la Biblioteca PUCV. Se abrirá el catálogo con la búsqueda lista en una nueva pestaña.</p>
+
+            <!-- Instrucciones paso a paso -->
+            <div class="alert alert-info d-flex gap-3 align-items-start mb-4" style="border-left: 4px solid #0d6efd; border-radius:8px;">
+                <span style="font-size:1.4rem;">💡</span>
+                <div>
+                    <strong>¿Cómo funciona?</strong><br>
+                    Ingresa las referencias manualmente o cárgalas desde el Gestor. Luego haz clic en <strong>"Buscar en catálogo"</strong> para cada libro — se abre el catálogo PUCV con la búsqueda lista. Marca el resultado y genera el informe final.
+                </div>
+            </div>
+
+            <!-- Carga desde Gestor -->
+            <div class="card mb-4 border-light bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h6 class="mb-0">Cargar desde el Gestor Principal</h6>
+                            <small class="text-muted">Importa automáticamente las referencias ya cargadas en el Gestor APA 7</small>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="disp_cargarDesdeGestor()">📥 Importar desde Gestor</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agregar referencia manual -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h6 class="mb-3">Agregar libro manualmente</h6>
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <input type="text" id="disp_titulo" class="form-control" placeholder="Título del libro *">
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" id="disp_autor" class="form-control" placeholder="Autor (opcional)">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" id="disp_anio" class="form-control" placeholder="Año">
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-success w-100" onclick="disp_agregarManual()" title="Agregar">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla principal -->
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered table-hover" id="disp_tabla">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="35%">Título</th>
+                            <th width="22%">Autor</th>
+                            <th width="7%">Año</th>
+                            <th width="16%">Buscar en PUCV</th>
+                            <th width="13%">Disponibilidad</th>
+                            <th width="7%">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="disp_tbody">
+                        <tr><td colspan="6" class="text-center text-muted py-4">Aún no hay libros en la lista. Agrega uno arriba o importa desde el Gestor.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Resumen + exportar -->
+            <div id="disp_resumen" style="display:none;" class="mb-3">
+                <div class="row g-3 text-center mb-3">
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#d1e7dd; border:1px solid #a3cfbb;">
+                            <div class="fw-bold fs-4" id="disp_cnt_disponible">0</div>
+                            <small class="text-success fw-bold">✅ Disponible</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#fff3cd; border:1px solid #ffe69c;">
+                            <div class="fw-bold fs-4" id="disp_cnt_prestado">0</div>
+                            <small class="text-warning fw-bold">🟡 Prestado / Revisar</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#f8d7da; border:1px solid #f1aeb5;">
+                            <div class="fw-bold fs-4" id="disp_cnt_noesta">0</div>
+                            <small class="text-danger fw-bold">🔴 No está en catálogo</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background:#e2e3e5; border:1px solid #c4c5c7;">
+                            <div class="fw-bold fs-4" id="disp_cnt_sin">0</div>
+                            <small class="text-muted fw-bold">⬜ Sin verificar</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-success" onclick="disp_exportarExcel()">📥 Descargar informe Excel</button>
+                    <button class="btn btn-outline-danger" onclick="disp_limpiar()">🗑️ Limpiar lista</button>
+                </div>
+            </div>
+        </div>
+        <!-- FIN Panel Disponibilidad -->
 
     </div>
 </div>
@@ -982,6 +1090,144 @@ function cm_enviarAlGestor() {
     cm_renderTabla();
     // Cambiar a la pestaña del Gestor
     document.getElementById('gestor-tab').click();
+}
+</script>
+
+<script>
+// ============================================================
+// PANEL DE DISPONIBILIDAD PUCV
+// ============================================================
+let disp_items = [];
+const OPAC_BASE = 'https://catalogo.pucv.cl/cgi-bin/koha/opac-search.pl?q=';
+
+const DISP_ESTADOS = {
+    'sin':        { label: '⬜ Sin verificar',       cls: '' },
+    'disponible': { label: '✅ Disponible',           cls: 'table-success' },
+    'prestado':   { label: '🟡 Prestado / Revisar',  cls: 'table-warning' },
+    'noesta':     { label: '🔴 No está en catálogo', cls: 'table-danger' },
+};
+
+function disp_agregarManual() {
+    const titulo = document.getElementById('disp_titulo').value.trim();
+    const autor  = document.getElementById('disp_autor').value.trim();
+    const anio   = document.getElementById('disp_anio').value.trim();
+    if (!titulo) return alert('El título es obligatorio.');
+    disp_items.push({ titulo, autor, anio, estado: 'sin' });
+    document.getElementById('disp_titulo').value = '';
+    document.getElementById('disp_autor').value  = '';
+    document.getElementById('disp_anio').value   = '';
+    disp_renderTabla();
+}
+
+function disp_cargarDesdeGestor() {
+    if (!gestor_refs.length) return alert('El Gestor Principal no tiene referencias cargadas aún.');
+    let agregados = 0;
+    gestor_refs.forEach(r => {
+        // Extraer título del HTML de referencia APA (entre <i>...</i>)
+        const matchTitulo = r.Referencia.match(/<i>(.*?)<\/i>/);
+        const titulo = matchTitulo ? matchTitulo[1] : r.Referencia.substring(0, 60);
+        // Extraer autor (antes del primer paréntesis)
+        const matchAutor = r.Referencia.match(/^([^(]+)\(/);
+        const autor = matchAutor ? matchAutor[1].trim() : '';
+        // Extraer año
+        const matchAnio = r.Referencia.match(/\((\d{4})\)/);
+        const anio = matchAnio ? matchAnio[1] : '';
+        // Evitar duplicados por título
+        const existe = disp_items.some(i => i.titulo.toLowerCase() === titulo.toLowerCase());
+        if (!existe) { disp_items.push({ titulo, autor, anio, estado: 'sin' }); agregados++; }
+    });
+    disp_renderTabla();
+    alert(`✅ ${agregados} libro(s) importados desde el Gestor.`);
+}
+
+function disp_buscarEnCatalogo(idx) {
+    const item = disp_items[idx];
+    // Construir query combinando título + autor para mejores resultados
+    let query = item.titulo;
+    if (item.autor) {
+        // Usar solo el primer apellido del autor para no ser demasiado restrictivo
+        const primerApellido = item.autor.split(',')[0].trim();
+        query = `${item.titulo} ${primerApellido}`;
+    }
+    const url = OPAC_BASE + encodeURIComponent(query);
+    window.open(url, '_blank');
+}
+
+function disp_setEstado(idx, estado) {
+    disp_items[idx].estado = estado;
+    disp_renderTabla();
+}
+
+function disp_eliminar(idx) {
+    disp_items.splice(idx, 1);
+    disp_renderTabla();
+}
+
+function disp_renderTabla() {
+    const tbody = document.getElementById('disp_tbody');
+    tbody.innerHTML = '';
+
+    if (disp_items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Aún no hay libros en la lista. Agrega uno arriba o importa desde el Gestor.</td></tr>';
+        document.getElementById('disp_resumen').style.display = 'none';
+        return;
+    }
+
+    disp_items.forEach((item, idx) => {
+        const estadoInfo = DISP_ESTADOS[item.estado];
+        tbody.innerHTML += `
+            <tr class="${estadoInfo.cls}">
+                <td><strong>${item.titulo}</strong></td>
+                <td>${item.autor || '<span class="text-muted">—</span>'}</td>
+                <td>${item.anio || '<span class="text-muted">—</span>'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary w-100" onclick="disp_buscarEnCatalogo(${idx})" title="Abre el catálogo PUCV con esta búsqueda">
+                        🔍 Buscar
+                    </button>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" onchange="disp_setEstado(${idx}, this.value)">
+                        <option value="sin"        ${item.estado==='sin'        ?'selected':''}>⬜ Sin verificar</option>
+                        <option value="disponible" ${item.estado==='disponible' ?'selected':''}>✅ Disponible</option>
+                        <option value="prestado"   ${item.estado==='prestado'   ?'selected':''}>🟡 Prestado</option>
+                        <option value="noesta"     ${item.estado==='noesta'     ?'selected':''}>🔴 No está</option>
+                    </select>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-danger" onclick="disp_eliminar(${idx})">✕</button>
+                </td>
+            </tr>`;
+    });
+
+    // Actualizar contadores del resumen
+    const cnts = { disponible:0, prestado:0, noesta:0, sin:0 };
+    disp_items.forEach(i => cnts[i.estado]++);
+    document.getElementById('disp_cnt_disponible').textContent = cnts.disponible;
+    document.getElementById('disp_cnt_prestado').textContent   = cnts.prestado;
+    document.getElementById('disp_cnt_noesta').textContent     = cnts.noesta;
+    document.getElementById('disp_cnt_sin').textContent        = cnts.sin;
+    document.getElementById('disp_resumen').style.display      = 'block';
+}
+
+function disp_exportarExcel() {
+    if (!disp_items.length) return alert('No hay datos para exportar.');
+    const estadoTexto = { sin:'Sin verificar', disponible:'Disponible', prestado:'Prestado / Revisar', noesta:'No está en catálogo' };
+    const datos = disp_items.map(i => ({
+        'Título':          i.titulo,
+        'Autor':           i.autor  || '',
+        'Año':             i.anio   || '',
+        'Disponibilidad':  estadoTexto[i.estado],
+        'URL Catálogo':    OPAC_BASE + encodeURIComponent(i.titulo + (i.autor ? ' ' + i.autor.split(',')[0] : ''))
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datos), 'Disponibilidad PUCV');
+    XLSX.writeFile(wb, 'Disponibilidad_Bibliografica_PUCV.xlsx');
+}
+
+function disp_limpiar() {
+    if (!confirm('¿Limpiar toda la lista de disponibilidad?')) return;
+    disp_items = [];
+    disp_renderTabla();
 }
 </script>
 
