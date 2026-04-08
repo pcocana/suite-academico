@@ -540,6 +540,18 @@
         finally { btn.innerHTML = '🪄 Buscar y Rellenar'; btn.disabled = false; }
     }
 
+    // --- Persistencia Gestor ---
+    function gestor_guardarStorage() {
+        try { localStorage.setItem('gestor_refs', JSON.stringify(gestor_refs)); } catch(e) {}
+    }
+    function gestor_cargarStorage() {
+        try {
+            const saved = localStorage.getItem('gestor_refs');
+            if (saved) { gestor_refs = JSON.parse(saved); gestor_renderTabla(); }
+        } catch(e) {}
+    }
+    document.addEventListener('DOMContentLoaded', gestor_cargarStorage);
+
     function gestor_agregarReferencia() {
         const tipo = document.getElementById('tipoRecurso').value;
         if(!tipo) return;
@@ -554,6 +566,7 @@
         if(ref.startsWith(" (")) ref = ref.substring(1); 
         
         gestor_refs.push({ "Carrera":document.getElementById('g_carrera').value, "Clave":document.getElementById('g_clave').value, "Asignatura":document.getElementById('g_nombre').value, "Tipo":document.getElementById('tipoBiblio').value, "Referencia": ref });
+        gestor_guardarStorage();
         gestor_renderTabla();
         document.getElementById('camposDinamicos').innerHTML='';
         document.getElementById('tipoRecurso').value='';
@@ -564,7 +577,7 @@
         tbody.innerHTML = '';
         gestor_refs.forEach((r, i) => tbody.innerHTML += `<tr><td>${r.Tipo}</td><td>${r.Referencia}</td><td><button class="btn btn-sm btn-danger" onclick="gestor_eliminar(${i})">X</button></td></tr>`);
     }
-    function gestor_eliminar(i) { gestor_refs.splice(i,1); gestor_renderTabla(); }
+    function gestor_eliminar(i) { gestor_refs.splice(i,1); gestor_guardarStorage(); gestor_renderTabla(); }
     
     function gestor_exportarExcel() {
         if(!gestor_refs.length) return alert("Sin datos");
@@ -1132,6 +1145,17 @@ const DISP_ESTADOS = {
     'noesta':     { label: '🔴 No está en catálogo', cls: 'table-danger' },
 };
 
+function disp_guardarStorage() {
+    try { localStorage.setItem('disp_items', JSON.stringify(disp_items)); } catch(e) {}
+}
+function disp_cargarStorage() {
+    try {
+        const saved = localStorage.getItem('disp_items');
+        if (saved) { disp_items = JSON.parse(saved); disp_renderTabla(); }
+    } catch(e) {}
+}
+document.addEventListener('DOMContentLoaded', disp_cargarStorage);
+
 function disp_agregarManual() {
     const titulo = document.getElementById('disp_titulo').value.trim();
     const autor  = document.getElementById('disp_autor').value.trim();
@@ -1142,27 +1166,43 @@ function disp_agregarManual() {
     document.getElementById('disp_autor').value  = '';
     document.getElementById('disp_anio').value   = '';
     disp_renderTabla();
+    disp_guardarStorage();
 }
 
 function disp_cargarDesdeGestor() {
     if (!gestor_refs.length) return alert('El Gestor Principal no tiene referencias cargadas aún.');
     let agregados = 0;
     gestor_refs.forEach(r => {
-        // Extraer título del HTML de referencia APA (entre <i>...</i>)
-        const matchTitulo = r.Referencia.match(/<i>(.*?)<\/i>/);
-        const titulo = matchTitulo ? matchTitulo[1] : r.Referencia.substring(0, 60);
-        // Extraer autor (antes del primer paréntesis)
-        const matchAutor = r.Referencia.match(/^([^(]+)\(/);
+        const ref = r.Referencia || '';
+
+        // Extraer título: entre <i> y </i>
+        const matchTitulo = ref.match(/<i>([^<]+)<\/i>/);
+        let titulo = matchTitulo ? matchTitulo[1].trim() : '';
+
+        // Fallback: texto entre el año y el primer punto
+        if (!titulo) {
+            const matchFallback = ref.match(/\(\d{4}\)\.\s*(.+?)\./);
+            titulo = matchFallback ? matchFallback[1].trim() : ref.replace(/<[^>]*>/g, '').substring(0, 80);
+        }
+
+        // Extraer autor: antes del primer "("
+        const matchAutor = ref.match(/^\s*([^(]+)\s*\(/);
         const autor = matchAutor ? matchAutor[1].trim() : '';
+
         // Extraer año
-        const matchAnio = r.Referencia.match(/\((\d{4})\)/);
+        const matchAnio = ref.match(/\((\d{4})\)/);
         const anio = matchAnio ? matchAnio[1] : '';
-        // Evitar duplicados por título
-        const existe = disp_items.some(i => i.titulo.toLowerCase() === titulo.toLowerCase());
+
+        if (!titulo) return;
+
+        // Evitar duplicados
+        const tituloNorm = titulo.toLowerCase().replace(/\s+/g, ' ');
+        const existe = disp_items.some(i => i.titulo.toLowerCase().replace(/\s+/g, ' ') === tituloNorm);
         if (!existe) { disp_items.push({ titulo, autor, anio, estado: 'sin' }); agregados++; }
     });
     disp_renderTabla();
-    alert(`✅ ${agregados} libro(s) importados desde el Gestor.`);
+    disp_guardarStorage();
+    alert(`\u2705 ${agregados} libro(s) importados desde el Gestor.`);
 }
 
 function disp_buscarEnCatalogo(idx) {
@@ -1181,11 +1221,13 @@ function disp_buscarEnCatalogo(idx) {
 function disp_setEstado(idx, estado) {
     disp_items[idx].estado = estado;
     disp_renderTabla();
+    disp_guardarStorage();
 }
 
 function disp_eliminar(idx) {
     disp_items.splice(idx, 1);
     disp_renderTabla();
+    disp_guardarStorage();
 }
 
 function disp_renderTabla() {
@@ -1253,6 +1295,7 @@ function disp_limpiar() {
     if (!confirm('¿Limpiar toda la lista de disponibilidad?')) return;
     disp_items = [];
     disp_renderTabla();
+    disp_guardarStorage();
 }
 </script>
 
