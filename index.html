@@ -75,11 +75,6 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="constructor-tab" data-bs-toggle="tab" data-bs-target="#constructor-pane" type="button">
-                ✍️ Constructor Manual
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
             <button class="nav-link" id="disponibilidad-tab" data-bs-toggle="tab" data-bs-target="#disponibilidad-pane" type="button">
                 🔍 Disponibilidad PUCV
             </button>
@@ -126,7 +121,9 @@
                         <option value="libro">Libro Completo</option>
                         <option value="capitulo">Capítulo de Libro</option>
                         <option value="revista">Artículo Científico</option>
-                        <option value="conferencia">Conferencia</option>
+                        <option value="tesis">Tesis / Trabajo de Grado</option>
+                        <option value="informe">Informe Técnico / Institucional</option>
+                        <option value="conferencia">Ponencia / Conferencia</option>
                         <option value="web">Sitio Web</option>
                         <option value="youtube">YouTube</option>
                         <option value="ia">IA (ChatGPT)</option>
@@ -218,76 +215,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- NUEVA PESTAÑA: Constructor Manual -->
-        <div class="tab-pane fade" id="constructor-pane">
-            <h3 class="mb-1 text-warning">✍️ Constructor Manual de Referencias</h3>
-            <p class="text-muted mb-4">Para libros y recursos <strong>sin ISBN o DOI</strong>. Completa los campos y genera la referencia APA 7 al instante.</p>
-
-            <div class="card mb-4 border-light bg-light">
-                <div class="card-body">
-                    <h5>Datos de Contexto <small class="text-muted fw-normal">(opcional)</small></h5>
-                    <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">Carrera</label><input type="text" id="cm_carrera" class="form-control" placeholder="Ej. Ingeniería"></div>
-                        <div class="col-md-4"><label class="form-label">Clave</label><input type="text" id="cm_clave" class="form-control" placeholder="Ej. MAT-101"></div>
-                        <div class="col-md-4"><label class="form-label">Asignatura</label><input type="text" id="cm_nombre" class="form-control" placeholder="Ej. Cálculo I"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Tipo de Recurso <span class="req-star">*</span></label>
-                    <select id="cm_tipo" class="form-select" onchange="cm_actualizarFormulario()">
-                        <option value="">-- Seleccione --</option>
-                        <option value="libro">Libro Completo</option>
-                        <option value="capitulo">Capítulo de Libro Editado</option>
-                        <option value="tesis">Tesis / Trabajo de Grado</option>
-                        <option value="informe">Informe Técnico / Institucional</option>
-                        <option value="conferencia">Ponencia / Conferencia</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Tipo Bibliografía</label>
-                    <select id="cm_tipoBiblio" class="form-select">
-                        <option value="Básica">Básica</option>
-                        <option value="Complementaria">Complementaria</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Campos dinámicos del constructor -->
-            <div id="cm_camposDinamicos" class="row g-3 mb-4"></div>
-
-            <!-- Vista previa en tiempo real -->
-            <div id="cm_preview_box" style="display:none;" class="p-3 mb-4 rounded border border-warning bg-warning bg-opacity-10">
-                <label class="form-label fw-bold text-warning">👁️ Vista Previa APA 7</label>
-                <div id="cm_preview_text" class="fst-italic text-dark" style="font-size:1rem; line-height:1.7;"></div>
-            </div>
-
-            <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-warning text-white" onclick="cm_agregarReferencia()">+ Agregar a la Lista</button>
-                <button class="btn btn-outline-secondary" onclick="cm_limpiarFormulario()">🗑️ Limpiar Campos</button>
-            </div>
-
-            <!-- Tabla de referencias construidas -->
-            <div class="mt-4">
-                <h5>Referencias Construidas</h5>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped" id="cm_tabla">
-                        <thead class="table-dark"><tr><th>Tipo Biblio</th><th>Referencia APA 7</th><th>Acción</th></tr></thead>
-                        <tbody id="cm_tbody">
-                            <tr><td colspan="3" class="text-center text-muted py-3">Aún no hay referencias construidas.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="d-flex gap-2 mt-2">
-                    <button class="btn btn-success" onclick="cm_exportarExcel()">📥 Descargar Excel</button>
-                    <button class="btn btn-outline-primary" onclick="cm_enviarAlGestor()">➡️ Enviar al Gestor Principal</button>
-                </div>
-            </div>
-        </div>
-        <!-- FIN Constructor Manual -->
 
         <!-- PANEL DE DISPONIBILIDAD PUCV -->
         <div class="tab-pane fade" id="disponibilidad-pane">
@@ -418,12 +345,15 @@
 <script>
     let gestor_refs = [];
     const gestor_campos = {
-        'libro': [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:'2020'},{id:'titulo',l:'Título',p:''},{id:'editorial',l:'Editorial',p:'',opt:true},{id:'isbn',l:'ISBN',p:'Ej. 9781292027661',opt:true}],
-        'capitulo': [{id:'autor',l:'Autor Capítulo',p:''},{id:'anio',l:'Año',p:''},{id:'tituloCap',l:'Título Capítulo',p:''},{id:'editor',l:'Editores',p:'In J. Doe (Ed.)'},{id:'tituloLibro',l:'Título Libro',p:''},{id:'paginas',l:'Páginas',p:'pp. 20-30'}],
-        'revista': [{id:'autor',l:'Autor(es)',p:''},{id:'anio',l:'Año',p:''},{id:'tituloArt',l:'Título Artículo',p:''},{id:'revista',l:'Nombre Revista',p:''},{id:'volumen',l:'Vol.',p:'',opt:true},{id:'numero',l:'Núm.',p:'',opt:true},{id:'paginas',l:'Págs.',p:'',opt:true},{id:'doi',l:'DOI',p:'',opt:true}],
-        'web': [{id:'autor',l:'Autor/Org',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Web',p:''},{id:'sitio',l:'Sitio',p:''},{id:'url',l:'URL',p:''}],
-        'youtube': [{id:'autor',l:'Canal',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Video',p:''},{id:'url',l:'URL',p:''}],
-        'ia': [{id:'autor',l:'Autor',p:''},{id:'anio',l:'Año',p:''},{id:'modelo',l:'Modelo',p:'ChatGPT'},{id:'url',l:'URL',p:''}]
+        'libro':       [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:'2020'},{id:'titulo',l:'Título',p:''},{id:'editorial',l:'Editorial',p:'',opt:true},{id:'isbn',l:'ISBN',p:'Ej. 9781292027661',opt:true}],
+        'capitulo':    [{id:'autor',l:'Autor Capítulo',p:''},{id:'anio',l:'Año',p:''},{id:'tituloCap',l:'Título Capítulo',p:''},{id:'editor',l:'Editores',p:'In J. Doe (Ed.)'},{id:'tituloLibro',l:'Título Libro',p:''},{id:'paginas',l:'Páginas',p:'pp. 20-30'}],
+        'revista':     [{id:'autor',l:'Autor(es)',p:''},{id:'anio',l:'Año',p:''},{id:'tituloArt',l:'Título Artículo',p:''},{id:'revista',l:'Nombre Revista',p:''},{id:'volumen',l:'Vol.',p:'',opt:true},{id:'numero',l:'Núm.',p:'',opt:true},{id:'paginas',l:'Págs.',p:'',opt:true},{id:'doi',l:'DOI',p:'',opt:true}],
+        'web':         [{id:'autor',l:'Autor/Org',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Web',p:''},{id:'sitio',l:'Sitio',p:''},{id:'url',l:'URL',p:''}],
+        'youtube':     [{id:'autor',l:'Canal',p:''},{id:'fecha',l:'Fecha',p:''},{id:'titulo',l:'Título Video',p:''},{id:'url',l:'URL',p:''}],
+        'ia':          [{id:'autor',l:'Autor',p:''},{id:'anio',l:'Año',p:''},{id:'modelo',l:'Modelo',p:'ChatGPT'},{id:'url',l:'URL',p:''}],
+        'tesis':       [{id:'autor',l:'Autor',p:'Apellido, N.'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título de la tesis',p:''},{id:'nivelTesis',l:'Nivel (Ej: Tesis de maestría)',p:'Tesis de maestría'},{id:'institucion',l:'Institución',p:'Universidad de...'},{id:'pais',l:'País',p:'Chile',opt:true}],
+        'informe':     [{id:'autor',l:'Autor / Institución',p:'Apellido, N. o Organización'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título del informe',p:''},{id:'numInforme',l:'N.º de informe',p:'Ej. Rep. N.º 5',opt:true},{id:'editorial',l:'Editorial / Institución',p:''}],
+        'conferencia': [{id:'autor',l:'Autor(es)',p:'Apellido, N.'},{id:'anio',l:'Año',p:''},{id:'titulo',l:'Título de la ponencia',p:''},{id:'evento',l:'Nombre del evento',p:''},{id:'ciudad',l:'Ciudad, País',p:'Ej. Santiago, Chile',opt:true}]
     };
 
     function gestor_actualizarFormulario() {
@@ -591,15 +521,32 @@
         if(!tipo) return;
         const getVal = (id) => { const el = document.getElementById(`g_${id}`); return el ? el.value.trim() : ''; };
         let ref = '';
-        if(tipo==='libro') ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>. ${getVal('editorial')}.`;
-        else if(tipo==='revista') ref = `${getVal('autor')} (${getVal('anio')}). ${getVal('tituloArt')}. <i>${getVal('revista')}</i>. ${getVal('doi')}`;
-        else ref = `${getVal('autor')} (${getVal('fecha')||getVal('anio')}). <i>${getVal('titulo')||getVal('tituloCap')}</i>. ${getVal('url')}`;
-        
+
+        if (tipo === 'libro') {
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>. ${getVal('editorial')}.`;
+        } else if (tipo === 'capitulo') {
+            const pags = getVal('paginas') ? `, ${getVal('paginas')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). ${getVal('tituloCap')}. ${getVal('editor')}, <i>${getVal('tituloLibro')}</i>${pags}. `;
+        } else if (tipo === 'revista') {
+            ref = `${getVal('autor')} (${getVal('anio')}). ${getVal('tituloArt')}. <i>${getVal('revista')}</i>. ${getVal('doi')}`;
+        } else if (tipo === 'tesis') {
+            const pais = getVal('pais') ? `, ${getVal('pais')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i> [${getVal('nivelTesis')}]. ${getVal('institucion')}${pais}.`;
+        } else if (tipo === 'informe') {
+            const num = getVal('numInforme') ? ` (${getVal('numInforme')})` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>${num}. ${getVal('editorial')}.`;
+        } else if (tipo === 'conferencia') {
+            const ciudad = getVal('ciudad') ? `, ${getVal('ciudad')}` : '';
+            ref = `${getVal('autor')} (${getVal('anio')}). <i>${getVal('titulo')}</i>. ${getVal('evento')}${ciudad}.`;
+        } else {
+            ref = `${getVal('autor')} (${getVal('fecha')||getVal('anio')}). <i>${getVal('titulo')||getVal('tituloCap')}</i>. ${getVal('url')}`;
+        }
+
         ref = ref.trim().replace(/\s*\.+\s*\.+/g, '.');
         if(!ref.endsWith('.')) ref += '.';
         if(ref.startsWith(" (")) ref = ref.substring(1);
 
-        // ISBN: solo se captura si el campo existe (tipo libro con ISBN ingresado)
+        // ISBN: solo se captura si el campo existe (tipo libro)
         const isbnEl = document.getElementById('g_isbn');
         const isbn = isbnEl ? isbnEl.value.trim() : '';
         
@@ -1014,209 +961,6 @@
         });
         doc.save(`${nombreAsignatura}_Referencias.pdf`);
     }
-</script>
-
-<script>
-// ============================================================
-// CONSTRUCTOR MANUAL DE REFERENCIAS (sin ISBN/DOI)
-// ============================================================
-let cm_refs = [];
-
-const cm_campos = {
-    'libro': [
-        {id:'autor',   l:'Autor(es)',        p:'Apellido, N. & Apellido, N.', req:true},
-        {id:'anio',    l:'Año de publicación', p:'2010',                     req:true},
-        {id:'titulo',  l:'Título del libro',   p:'',                         req:true},
-        {id:'edicion', l:'Edición',            p:'Ej. 3.ª ed.',              req:false},
-        {id:'editorial',l:'Editorial',         p:'',                         req:true},
-        {id:'ciudad',  l:'Ciudad (si aplica)', p:'Ej. México',               req:false},
-    ],
-    'capitulo': [
-        {id:'autorCap',  l:'Autor(es) del capítulo', p:'Apellido, N.',              req:true},
-        {id:'anio',      l:'Año',                     p:'2015',                     req:true},
-        {id:'tituloCap', l:'Título del capítulo',     p:'',                         req:true},
-        {id:'editor',    l:'Editor(es) del libro',    p:'In A. Editor (Ed.)',       req:true},
-        {id:'tituloLibro',l:'Título del libro',       p:'',                         req:true},
-        {id:'paginas',   l:'Páginas del capítulo',    p:'pp. 45-78',               req:false},
-        {id:'edicion',   l:'Edición',                 p:'Ej. 2.ª ed.',             req:false},
-        {id:'editorial', l:'Editorial',               p:'',                         req:true},
-    ],
-    'tesis': [
-        {id:'autor',    l:'Autor',                    p:'Apellido, N.',             req:true},
-        {id:'anio',     l:'Año',                      p:'2019',                     req:true},
-        {id:'titulo',   l:'Título de la tesis',       p:'',                         req:true},
-        {id:'nivelTesis',l:'Nivel',                   p:'Tesis de maestría',        req:true},
-        {id:'institucion',l:'Institución',            p:'Universidad de...',        req:true},
-        {id:'pais',     l:'País',                     p:'México',                   req:false},
-    ],
-    'informe': [
-        {id:'autor',    l:'Autor / Institución',      p:'Apellido, N. o Organización', req:true},
-        {id:'anio',     l:'Año',                      p:'2021',                     req:true},
-        {id:'titulo',   l:'Título del informe',       p:'',                         req:true},
-        {id:'numInforme',l:'N.º de informe',          p:'Ej. Rep. N.º 5',          req:false},
-        {id:'editorial',l:'Editorial / Institución',  p:'',                         req:true},
-    ],
-    'conferencia': [
-        {id:'autor',    l:'Autor(es)',                p:'Apellido, N.',             req:true},
-        {id:'anio',     l:'Año',                      p:'2022',                     req:true},
-        {id:'titulo',   l:'Título de la ponencia',    p:'',                         req:true},
-        {id:'evento',   l:'Nombre del evento',        p:'',                         req:true},
-        {id:'ciudad',   l:'Ciudad, País',             p:'Ej. Bogotá, Colombia',     req:false},
-    ],
-};
-
-function cm_actualizarFormulario() {
-    const tipo = document.getElementById('cm_tipo').value;
-    const div = document.getElementById('cm_camposDinamicos');
-    div.innerHTML = '';
-    if (!tipo || !cm_campos[tipo]) {
-        document.getElementById('cm_preview_box').style.display = 'none';
-        return;
-    }
-    cm_campos[tipo].forEach(c => {
-        const req = c.req ? '<span class="req-star">*</span>' : '<small class="text-muted">(Opcional)</small>';
-        div.innerHTML += `
-            <div class="col-md-6">
-                <label class="form-label">${c.l} ${req}</label>
-                <input type="text" class="form-control" id="cm_${c.id}" placeholder="${c.p}" oninput="cm_actualizarPreview()">
-            </div>`;
-    });
-    document.getElementById('cm_preview_box').style.display = 'block';
-    cm_actualizarPreview();
-}
-
-function cm_getVal(id) {
-    const el = document.getElementById(`cm_${id}`);
-    return el ? el.value.trim() : '';
-}
-
-function cm_generarAPA() {
-    const tipo = document.getElementById('cm_tipo').value;
-    const v = cm_getVal;
-    let ref = '';
-
-    if (tipo === 'libro') {
-        const autor    = v('autor')    || 'Autor, A.';
-        const anio     = v('anio')     || 's.f.';
-        const titulo   = v('titulo')   || 'Título del libro';
-        const edicion  = v('edicion')  ? ` (${v('edicion')})` : '';
-        const editorial= v('editorial')|| 's.e.';
-        ref = `${autor} (${anio}). <i>${titulo}</i>${edicion}. ${editorial}.`;
-    }
-    else if (tipo === 'capitulo') {
-        const autorCap   = v('autorCap')   || 'Autor, A.';
-        const anio       = v('anio')       || 's.f.';
-        const tituloCap  = v('tituloCap')  || 'Título del capítulo';
-        const editor     = v('editor')     || 'Editor, E. (Ed.)';
-        const tituloLibro= v('tituloLibro')|| 'Título del libro';
-        const edicion    = v('edicion')    ? ` (${v('edicion')})` : '';
-        const paginas    = v('paginas')    ? `, ${v('paginas')}` : '';
-        const editorial  = v('editorial')  || 's.e.';
-        ref = `${autorCap} (${anio}). ${tituloCap}. ${editor}, <i>${tituloLibro}</i>${edicion}${paginas}. ${editorial}.`;
-    }
-    else if (tipo === 'tesis') {
-        const autor      = v('autor')      || 'Autor, A.';
-        const anio       = v('anio')       || 's.f.';
-        const titulo     = v('titulo')     || 'Título de la tesis';
-        const nivel      = v('nivelTesis') || 'Tesis';
-        const inst       = v('institucion')|| 'Institución';
-        const pais       = v('pais')       ? `, ${v('pais')}` : '';
-        ref = `${autor} (${anio}). <i>${titulo}</i> [${nivel}]. ${inst}${pais}.`;
-    }
-    else if (tipo === 'informe') {
-        const autor      = v('autor')      || 'Autor, A.';
-        const anio       = v('anio')       || 's.f.';
-        const titulo     = v('titulo')     || 'Título del informe';
-        const num        = v('numInforme') ? ` (${v('numInforme')})` : '';
-        const editorial  = v('editorial')  || 'Editorial';
-        ref = `${autor} (${anio}). <i>${titulo}</i>${num}. ${editorial}.`;
-    }
-    else if (tipo === 'conferencia') {
-        const autor      = v('autor')      || 'Autor, A.';
-        const anio       = v('anio')       || 's.f.';
-        const titulo     = v('titulo')     || 'Título de la ponencia';
-        const evento     = v('evento')     || 'Nombre del evento';
-        const ciudad     = v('ciudad')     ? `, ${v('ciudad')}` : '';
-        ref = `${autor} (${anio}). <i>${titulo}</i>. ${evento}${ciudad}.`;
-    }
-
-    // Limpieza final: espacios y puntos dobles
-    ref = ref.replace(/\s*\.+\s*\.+/g, '.').replace(/\s{2,}/g, ' ').trim();
-    if (!ref.endsWith('.')) ref += '.';
-    return ref;
-}
-
-function cm_actualizarPreview() {
-    const tipo = document.getElementById('cm_tipo').value;
-    if (!tipo) return;
-    document.getElementById('cm_preview_text').innerHTML = cm_generarAPA();
-}
-
-function cm_agregarReferencia() {
-    const tipo = document.getElementById('cm_tipo').value;
-    if (!tipo) return alert('Selecciona un tipo de recurso.');
-
-    const ref = cm_generarAPA();
-    cm_refs.push({
-        Carrera:    document.getElementById('cm_carrera').value,
-        Clave:      document.getElementById('cm_clave').value,
-        Asignatura: document.getElementById('cm_nombre').value,
-        Tipo:       document.getElementById('cm_tipoBiblio').value,
-        Referencia: ref
-    });
-    cm_renderTabla();
-    cm_limpiarFormulario();
-}
-
-function cm_renderTabla() {
-    const tbody = document.getElementById('cm_tbody');
-    if (cm_refs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Aún no hay referencias construidas.</td></tr>';
-        return;
-    }
-    tbody.innerHTML = '';
-    cm_refs.forEach((r, i) => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${r.Tipo}</td>
-                <td>${r.Referencia}</td>
-                <td><button class="btn btn-sm btn-danger" onclick="cm_eliminar(${i})">X</button></td>
-            </tr>`;
-    });
-}
-
-function cm_eliminar(i) { cm_refs.splice(i, 1); cm_renderTabla(); }
-
-function cm_limpiarFormulario() {
-    document.getElementById('cm_tipo').value = '';
-    document.getElementById('cm_camposDinamicos').innerHTML = '';
-    document.getElementById('cm_preview_box').style.display = 'none';
-}
-
-function cm_exportarExcel() {
-    if (!cm_refs.length) return alert('Sin referencias para exportar.');
-    const datos = cm_refs.map(r => ({
-        "Carrera":    r.Carrera,
-        "Clave":      r.Clave,
-        "Asignatura": r.Asignatura,
-        "Tipo":       r.Tipo,
-        "Referencia": r.Referencia.replace(/<[^>]*>?/gm, '')
-    }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datos), "Constructor");
-    XLSX.writeFile(wb, "Referencias_Constructor_Manual.xlsx");
-}
-
-function cm_enviarAlGestor() {
-    if (!cm_refs.length) return alert('No hay referencias para enviar.');
-    cm_refs.forEach(r => gestor_refs.push(r));
-    gestor_renderTabla();
-    alert(`✅ ${cm_refs.length} referencia(s) enviadas al Gestor Principal.`);
-    cm_refs = [];
-    cm_renderTabla();
-    // Cambiar a la pestaña del Gestor
-    document.getElementById('gestor-tab').click();
-}
 </script>
 
 <script>
