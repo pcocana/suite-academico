@@ -162,7 +162,10 @@
 
             <div class="d-flex justify-content-between mt-3 mb-2">
                 <button class="btn btn-danger btn-sm" onclick="ext_reiniciarTodo()">🗑️ Limpiar Todo</button>
-                <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Descargar Excel Unificado</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary disabled" id="btnEnviarGestor" onclick="ext_enviarAlGestor()">➡️ Enviar al Gestor</button>
+                    <button class="btn btn-success disabled" id="btnDescargarExt" onclick="ext_exportarExcel()">📥 Descargar Excel Unificado</button>
+                </div>
             </div>
 
             <div class="table-responsive mt-3" style="max-height: 500px; overflow-y: auto;">
@@ -724,48 +727,51 @@
     // FUNCIÓN CORE CORREGIDA
     function extraerYAcumular(texto, filename) {
         texto = texto.replace(/\r/g, '\n').replace(/\t/g, ' ');
-        let carrera = "No detectado"; let clave = "S/D"; let nombre = "No detectado";
+        let carrera = ""; let clave = ""; let nombre = "";
         
-        const matchClave = texto.match(/(?:Sigla|Código|Asignatura|Clave)[:\s,]+([A-Z]{3}\s*\d{3,5})/i);
+        const matchClave = texto.match(/(?:Sigla|Código|Asignatura|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i);
         if (matchClave) clave = matchClave[1].trim();
 
         const matchCarrera = texto.match(/(?:Carrera|Programa)[:\s]+([^\n\r]+)/i);
-        if (matchCarrera) carrera = matchCarrera[1].trim();
+        if (matchCarrera) carrera = matchCarrera[1].trim().substring(0, 60);
 
-        // DETECCIÓN DE NOMBRE
         const matchNombre = texto.match(/(?:Nombre de la asignatura|Asignatura|Nombre del Curso|Nombre del curso)[:\s,"]+([^\n\r]+?)(?=\n|\r|Descripción|Objetivos|Sigla|Código|Créditos|$|")/i);
         if (matchNombre) {
             nombre = matchNombre[1].trim().replace(/^"|"$/g, '');
         }
 
-        // FAILSAFE NOMBRE LARGO
-        if (nombre.length > 100 || nombre === "No detectado") {
-            nombre = filename.replace(/\.(pdf|docx)$/i, '').toUpperCase();
+        if (nombre.length > 100 || !nombre) {
+            nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
         }
 
-        const idxBiblio = texto.search(/(?:Bibliografía|Referencias|Textos Guías)/i);
+        const idxBiblio = texto.search(/(?:Bibliografía|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)/i);
         if (idxBiblio === -1) return;
         
         const textoBiblio = texto.substring(idxBiblio);
-        let idxBasica = textoBiblio.search(/(?:Bibliografía\s+Obligatoria|Bibliografía\s+Básica|Básica|Obligatoria)/i);
-        let idxComp = textoBiblio.search(/(?:Bibliografía\s+Complementaria|Complementaria)/i);
+
+        // Detectar bloques — ampliar patrones para cubrir "Obligatoria", "Recomendada", "Básica", "Complementaria"
+        let idxBasica = textoBiblio.search(/(?:Bibliografía\s+(?:Obligatoria|Básica)|(?:^|\s)(?:Obligatoria|Básica|Recomendada)(?:\s|:))/im);
+        let idxComp   = textoBiblio.search(/(?:Bibliografía\s+Complementaria|(?:^|\s)(?:Complementaria|Adicional)(?:\s|:))/im);
         
         if (idxBasica === -1) idxBasica = 0;
         let bloqueBasica = ""; let bloqueComp = "";
         
         if (idxComp !== -1 && idxComp > idxBasica) {
             bloqueBasica = textoBiblio.substring(idxBasica, idxComp);
-            bloqueComp = textoBiblio.substring(idxComp);
+            bloqueComp   = textoBiblio.substring(idxComp);
         } else {
             bloqueBasica = textoBiblio.substring(idxBasica);
         }
 
         const refsBasicas = segmentarReferencias(bloqueBasica);
-        const refsComp = segmentarReferencias(bloqueComp);
+        const refsComp    = segmentarReferencias(bloqueComp);
         
+        // Normalizar tipo: todo lo básico/obligatorio/recomendado → "Básica"
+        //                  todo lo complementario/adicional         → "Complementaria"
         const agregar = (lista, tipo) => {
             lista.forEach(r => {
                 const refLimpia = r.trim().replace(/\s*\.+\s*\.+/g, '.');
+                if (refLimpia.length < 15) return;
                 ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo, ref: refLimpia, status: validarCalidad(refLimpia) });
             });
         };
@@ -778,24 +784,14 @@
     // VERSIÓN DEFINITIVA: ESTRATEGIA DE APLANADO
     function segmentarReferencias(bloque) {
         if (!bloque) return [];
-
-        // 1. ESTRATEGIA DE APLANADO: Eliminamos todos los saltos de línea
         let limpio = bloque.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ');
-
-        // 2. Limpieza de títulos
-        limpio = limpio.replace(/(Bibliografía|Referencias|Obligatoria|Básica|Complementaria|Textos Guías)/gi, '').replace(/"/g, ''); 
-
-        // 3. INYECTAR SEPARADORES (###SPLIT###)
-        // Patrón A: Listas numeradas
+        // Limpiar etiquetas de sección
+        limpio = limpio.replace(/(Bibliografía|Referencias|Obligatoria|Básica|Complementaria|Adicional|Recomendada|Textos?\s+Guías?)/gi, '').replace(/"/g, ''); 
+        // Inyectar separadores
         limpio = limpio.replace(/\s(\d{1,2}[.\-\)]+\s+)/g, '###SPLIT###$1');
-        // Patrón B: Citas tipo "[1]"
         limpio = limpio.replace(/\s(\[\d+\])/g, '###SPLIT###$1');
-        // Patrón C: Viñetas
         limpio = limpio.replace(/\s([•\-])\s+/g, '###SPLIT###$1 ');
-        // Patrón D: Autores APA si no hay números
         limpio = limpio.replace(/\.\s+([A-Z][a-záéíóúñ]+\s*,\s+[A-Z]\.)/g, '.###SPLIT###$1');
-
-        // 4. DIVIDIR Y LIMPIAR
         return limpio.split('###SPLIT###').map(x => x.trim()).filter(x => {
             if (x.length < 10) return false; 
             if (/^\d+$/.test(x)) return false; 
@@ -823,6 +819,7 @@
         document.getElementById('badgeArchivos').innerText = ext_filesProcesados.size + " Archivos";
         document.getElementById('badgeRefs').innerText = ext_datos.length + " Refs";
         document.getElementById('btnDescargarExt').classList.remove('disabled');
+        document.getElementById('btnEnviarGestor').classList.remove('disabled');
         document.getElementById('statusLog').innerText = "Procesamiento completo.";
     }
 
@@ -831,17 +828,108 @@
         ext_datos=[]; ext_filesProcesados.clear();
         document.getElementById('tablaExtractorBody').innerHTML='<tr><td colspan="5" class="text-center text-muted">Esperando...</td></tr>';
         document.getElementById('badgeArchivos').innerText="0"; document.getElementById('badgeRefs').innerText="0";
+        document.getElementById('btnDescargarExt').classList.add('disabled');
+        document.getElementById('btnEnviarGestor').classList.add('disabled');
+    }
+
+    function ext_enviarAlGestor() {
+        if (!ext_datos.length) return;
+        let agregados = 0;
+        ext_datos.forEach(d => {
+            // Evitar duplicados por referencia
+            const existe = gestor_refs.some(r => r.Referencia === d.ref);
+            if (!existe) {
+                gestor_refs.push({
+                    Carrera:    d.carrera  || '',
+                    Clave:      d.clave    || '',
+                    Asignatura: d.nombre   || '',
+                    Tipo:       d.tipo,
+                    Referencia: d.ref,
+                    ISBN:       ''
+                });
+                agregados++;
+            }
+        });
+        gestor_renderTabla();
+        alert(`✅ ${agregados} referencia(s) enviadas al Gestor Principal.${agregados < ext_datos.length ? `\n(${ext_datos.length - agregados} ya existían y no se duplicaron)` : ''}`);
+        document.getElementById('gestor-tab').click();
     }
 
     function ext_exportarExcel() {
         if(!ext_datos.length) return;
-        const datos = [["Archivo", "Carrera", "Clave", "Asignatura", "Tipo", "Referencia", "Estado"]];
-        ext_datos.forEach(d => datos.push([d.archivo, d.carrera, d.clave, d.nombre, d.tipo, d.ref, d.status.msg]));
-        const ws = XLSX.utils.aoa_to_sheet(datos);
-        ws['!cols'] = [{wch:20}, {wch:15}, {wch:10}, {wch:25}, {wch:15}, {wch:80}, {wch:15}];
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Reporte_Unificado");
-        XLSX.writeFile(wb, "Reporte_Bibliografico.xlsx");
+        const ws = {};
+
+        // Detectar carrera
+        const carrera = ext_datos.find(d => d.carrera)?.carrera || '';
+
+        // Encabezados formato oficial
+        ws['A1'] = { v: 'Carrera o Programa: ' + carrera, t: 's' };
+        ws['A2'] = { v: 'Clave Asignatura',              t: 's' };
+        ws['B2'] = { v: 'Nombre Asignatura',             t: 's' };
+        ws['C2'] = { v: 'Tipo Bibliografía',             t: 's' };
+        ws['D2'] = { v: 'Referencias',                   t: 's' };
+        ws['E2'] = { v: 'Disponibilidad en Bibliotecas', t: 's' };
+        ws['J2'] = { v: 'Observaciones',                 t: 's' };
+        ws['K2'] = { v: 'Proveedor',                     t: 's' };
+        ws['L2'] = { v: 'Valor pesos',                   t: 's' };
+        ws['E3'] = { v: 'LIBROS N° de ejemplares (cantidad - año)',            t: 's' };
+        ws['I3'] = { v: 'Artículo Científico Disponible en (papel - on line)', t: 's' };
+        ws['E4'] = { v: 'Btca UA',                t: 's' };
+        ws['F4'] = { v: 'Otras Btcas',            t: 's' };
+        ws['G4'] = { v: 'Total',                  t: 's' };
+        ws['H4'] = { v: 'Disponible on line URL', t: 's' };
+
+        let fila = 5;
+
+        // Agrupar por asignatura
+        const grupos = {};
+        ext_datos.forEach(d => {
+            const key = (d.clave || '') + '||' + (d.nombre || '');
+            if (!grupos[key]) grupos[key] = { clave: d.clave || '', asignatura: d.nombre || '', basica: [], complementaria: [] };
+            if (d.tipo === 'Complementaria') grupos[key].complementaria.push(d);
+            else grupos[key].basica.push(d);
+        });
+
+        Object.values(grupos).forEach(grupo => {
+            if (grupo.basica.length) {
+                ws[`C${fila}`] = { v: 'básica', t: 's' };
+                fila++;
+                grupo.basica.forEach(d => {
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: d.ref,            t: 's' };
+                    ws[`E${fila}`] = { v: '', t: 's' }; ws[`F${fila}`] = { v: '', t: 's' }; ws[`G${fila}`] = { v: '', t: 's' }; ws[`H${fila}`] = { v: '', t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+            if (grupo.complementaria.length) {
+                ws[`C${fila}`] = { v: 'complementaria', t: 's' };
+                fila++;
+                grupo.complementaria.forEach(d => {
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: d.ref,            t: 's' };
+                    ws[`E${fila}`] = { v: '', t: 's' }; ws[`F${fila}`] = { v: '', t: 's' }; ws[`G${fila}`] = { v: '', t: 's' }; ws[`H${fila}`] = { v: '', t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+        });
+
+        ws['!cols'] = [{wch:16},{wch:30},{wch:16},{wch:70},{wch:12},{wch:12},{wch:10},{wch:25},{wch:30},{wch:25},{wch:18},{wch:14}];
+        ws['!merges'] = [
+            { s:{r:0,c:0}, e:{r:0,c:11} },
+            { s:{r:1,c:4}, e:{r:1,c:8} },
+            { s:{r:2,c:4}, e:{r:2,c:7} },
+        ];
+        ws['!ref'] = `A1:L${fila}`;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Bibliografías');
+        XLSX.writeFile(wb, `Extractor_${carrera || 'Bibliografía'}.xlsx`);
     }
 </script>
 
