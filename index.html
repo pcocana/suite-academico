@@ -194,23 +194,48 @@
         </div>
 
         <div class="tab-pane fade" id="importador-pane">
-            <h3 class="mb-4" style="color: #6610f2;">Importador de Referencias Externas</h3>
-            <p class="text-muted">Sube archivos <strong>.RIS</strong> o <strong>.BIB</strong> de Zotero/Mendeley.</p>
+            <h3 class="mb-1" style="color: #6610f2;">📚 Importador Zotero / Mendeley</h3>
+            <p class="text-muted mb-4">Sube archivos <strong>.RIS</strong> o <strong>.BIB</strong> exportados desde Zotero o Mendeley.</p>
 
-            <div class="drop-zone drop-zone-import" id="dropZoneImport">
+            <div class="drop-zone drop-zone-import" id="dropZoneImport" onclick="document.getElementById('fileInputImport').click()">
                 <h4 style="color: #6610f2;">📚 Arrastra tu archivo .RIS o .BIB aquí</h4>
+                <p class="text-muted mb-1">O haz clic para seleccionar</p>
                 <input type="file" id="fileInputImport" accept=".ris,.bib" style="display:none">
-                <button class="btn btn-outline-secondary btn-sm mt-2" onclick="document.getElementById('fileInputImport').click()">Seleccionar Archivo</button>
+                <button class="btn btn-outline-secondary btn-sm mt-1" onclick="event.stopPropagation(); document.getElementById('fileInputImport').click()">Seleccionar Archivo</button>
             </div>
 
             <div class="mt-4" id="importResults" style="display:none;">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5>Referencias Generadas (APA 7)</h5>
-                    <button class="btn btn-primary btn-sm" onclick="imp_copiarTodas()">📋 Copiar Todas al Portapapeles</button>
+
+                <!-- Datos de contexto -->
+                <div class="card mb-3 border-light bg-light">
+                    <div class="card-body">
+                        <h6 class="mb-3">Datos de contexto <small class="text-muted fw-normal">(se asignan a todas las referencias importadas)</small></h6>
+                        <div class="row g-2">
+                            <div class="col-md-3"><label class="form-label small">Carrera</label><input type="text" id="imp_carrera" class="form-control form-control-sm" placeholder="Ej. Pedagogía en Matemática"></div>
+                            <div class="col-md-2"><label class="form-label small">Clave</label><input type="text" id="imp_clave" class="form-control form-control-sm" placeholder="Ej. IMA 1001"></div>
+                            <div class="col-md-4"><label class="form-label small">Asignatura</label><input type="text" id="imp_asignatura" class="form-control form-control-sm" placeholder="Ej. Cálculo I"></div>
+                            <div class="col-md-3"><label class="form-label small">Tipo Bibliografía</label>
+                                <select id="imp_tipo" class="form-select form-select-sm">
+                                    <option value="Básica">Básica</option>
+                                    <option value="Complementaria">Complementaria</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Acciones -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Referencias generadas <span class="badge bg-secondary" id="imp_badge">0</span></h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="imp_copiarTodas()">📋 Copiar todas</button>
+                        <button class="btn btn-primary btn-sm" onclick="imp_enviarAlGestor()">➡️ Enviar al Gestor</button>
+                    </div>
+                </div>
+
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
-                        <thead class="table-light"><tr><th>Referencia Lista</th><th width="100">Acción</th></tr></thead>
+                    <table class="table table-bordered table-hover table-sm">
+                        <thead class="table-light"><tr><th>Referencia APA 7</th><th width="80" class="text-center">Copiar</th></tr></thead>
                         <tbody id="tablaImportadorBody"></tbody>
                     </table>
                 </div>
@@ -1115,105 +1140,50 @@
         const tbody = document.getElementById('tablaImportadorBody');
         const resultsDiv = document.getElementById('importResults');
         tbody.innerHTML = '';
-        
-        // Limpiamos botones previos si existen
-        const btnContainer = document.getElementById('imp-export-buttons');
-        if(btnContainer) btnContainer.remove();
 
-        if(imp_referencias.length > 0) {
+        if (imp_referencias.length > 0) {
             resultsDiv.style.display = 'block';
-            
-            // 1. CREAR BOTONES DE DESCARGA
-            const divBotones = document.createElement('div');
-            divBotones.id = 'imp-export-buttons';
-            divBotones.className = 'd-flex gap-2 mb-3 justify-content-end';
-            divBotones.innerHTML = `
-                <button class="btn btn-primary" onclick="imp_descargarWord()">📄 Descargar Word (para Extractor)</button>
-                <button class="btn btn-danger" onclick="imp_descargarPDF()">📕 Descargar PDF (para Extractor)</button>
-            `;
-            // Insertar botones antes de la tabla
-            const tableContainer = document.querySelector('#importResults .table-responsive');
-            tableContainer.parentNode.insertBefore(divBotones, tableContainer);
-
-            // 2. LLENAR TABLA
-            imp_referencias.forEach((ref, idx) => {
+            document.getElementById('imp_badge').textContent = imp_referencias.length;
+            imp_referencias.forEach((ref) => {
                 const cita = imp_generarAPA(ref);
                 const citaClean = cita.replace(/<i>|<\/i>/g, '');
                 tbody.innerHTML += `
                     <tr>
-                        <td>${cita}</td>
+                        <td><small>${cita}</small></td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="imp_copiar('${citaClean.replace(/'/g, "\\'")}')">Copiar</button>
+                            <button class="btn btn-sm btn-outline-secondary py-0" onclick="imp_copiar('${citaClean.replace(/'/g, "\\'")}')">📋</button>
                         </td>
                     </tr>`;
             });
         }
     }
 
-    function imp_copiar(texto) { navigator.clipboard.writeText(texto); alert("Copiado!"); }
-    
-    function imp_copiarTodas() { 
-        const todas = imp_referencias.map(r => imp_generarAPA(r).replace(/<i>|<\/i>/g, '')).join('\n\n'); 
-        navigator.clipboard.writeText(todas); 
-        alert("¡Copiado!"); 
+    function imp_copiar(texto) { navigator.clipboard.writeText(texto); alert("¡Copiado!"); }
+
+    function imp_copiarTodas() {
+        const todas = imp_referencias.map(r => imp_generarAPA(r).replace(/<i>|<\/i>/g, '')).join('\n\n');
+        navigator.clipboard.writeText(todas);
+        alert("¡Copiado!");
     }
 
-    function imp_descargarWord() {
-        if(imp_referencias.length === 0) return;
-        const nombreAsignatura = prompt("Nombre de la Asignatura (para el encabezado):", "Asignatura Importada");
-        if(nombreAsignatura === null) return;
-
-        let contenido = `
-            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-            <head><meta charset='utf-8'><title>Bibliografía Exportada</title></head>
-            <body>
-            <h1>${nombreAsignatura}</h1>
-            <h2>Bibliografía</h2>
-            <ul>
-        `;
-        imp_referencias.forEach(ref => { contenido += `<li style="margin-bottom: 10px;">${imp_generarAPA(ref)}</li>`; });
-        contenido += "</ul></body></html>";
-
-        const blob = new Blob(['\ufeff', contenido], { type: 'application/msword' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${nombreAsignatura}_Referencias.doc`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    async function imp_descargarPDF() {
-        if(imp_referencias.length === 0) return;
-        const nombreAsignatura = prompt("Nombre de la Asignatura (para el encabezado):", "Asignatura Importada");
-        if(nombreAsignatura === null) return;
-
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-
-        doc.setFont("times", "bold");
-        doc.setFontSize(16);
-        doc.text(nombreAsignatura, 10, 20);
-        doc.setFontSize(14);
-        doc.text("Bibliografía", 10, 30);
-        doc.setFont("times", "normal");
-        doc.setFontSize(12);
-
-        let y = 40; 
-        const margin = 10;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const maxWidth = pageWidth - (margin * 2);
-
+    function imp_enviarAlGestor() {
+        if (!imp_referencias.length) return alert('No hay referencias para enviar.');
+        const carrera    = document.getElementById('imp_carrera').value.trim();
+        const clave      = document.getElementById('imp_clave').value.trim();
+        const asignatura = document.getElementById('imp_asignatura').value.trim();
+        const tipo       = document.getElementById('imp_tipo').value;
+        let agregados = 0;
         imp_referencias.forEach(ref => {
-            let texto = imp_generarAPA(ref).replace(/<i>/g, '').replace(/<\/i>/g, '');
-            const lineas = doc.splitTextToSize(texto, maxWidth);
-            if (y + (lineas.length * 7) > doc.internal.pageSize.getHeight() - 10) {
-                doc.addPage(); y = 20;
+            const cita = imp_generarAPA(ref);
+            const existe = gestor_refs.some(r => r.Referencia === cita);
+            if (!existe) {
+                gestor_refs.push({ Carrera: carrera, Clave: clave, Asignatura: asignatura, Tipo: tipo, Referencia: cita, ISBN: '' });
+                agregados++;
             }
-            doc.text(lineas, margin, y);
-            y += (lineas.length * 5) + 5;
         });
-        doc.save(`${nombreAsignatura}_Referencias.pdf`);
+        gestor_renderTabla();
+        alert(`✅ ${agregados} referencia(s) enviadas al Gestor.${agregados < imp_referencias.length ? `\n(${imp_referencias.length - agregados} ya existían)` : ''}`);
+        document.getElementById('gestor-tab').click();
     }
 </script>
 
