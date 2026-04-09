@@ -1291,29 +1291,27 @@ function disp_cargarDesdeGestor() {
 
 function disp_buscarEnCatalogo(idx) {
     const item = disp_items[idx];
-    // Normalizar texto para búsqueda en KOHA — quitar tildes y caracteres especiales
+    // Normalizar texto para KOHA — apóstrofe a espacio, luego quitar tildes
     function disp_normalizarQuery(texto) {
         return texto
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[''´`]/g, ' ')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-zA-Z0-9\s]/g, ' ')
             .replace(/\s+/g, ' ').trim();
     }
 
-    // Construir query efectiva para KOHA: palabras clave del título + apellido
+    // Query formato KOHA: apellido AND palabra1 AND palabra2
     function disp_construirQuery(titulo, autor) {
-        // Quitar artículos y preposiciones cortas al inicio y dentro del título
-        const stopwords = new Set(['de','la','le','les','du','des','el','los','las','the','a','an','en','et','of','in','sur','l','d','y','con','por','para','un','una','al','del']);
-        let tituloNorm = disp_normalizarQuery(titulo);
-        // Tomar palabras significativas (más de 2 caracteres y no stopwords)
-        const palabras = tituloNorm.split(' ')
-            .filter(p => p.length > 2 && !stopwords.has(p.toLowerCase()))
-            .slice(0, 4);
+        const stopwords = new Set(['de','la','le','les','du','des','el','los','las','the','a','an','en','et','of','in','sur','d','y','con','por','un','una','al','del','Histoire','historia']);
         const apellido = autor ? disp_normalizarQuery(autor.split(',')[0].trim()) : '';
-        return [...palabras, apellido].filter(Boolean).join(' ');
+        const palabras = disp_normalizarQuery(titulo)
+            .split(' ')
+            .filter(p => p.length > 3 && !stopwords.has(p.toLowerCase()))
+            .slice(0, 2);
+        return [apellido, ...palabras].filter(Boolean).join(' AND ');
     }
 
-    // Construir query combinando palabras clave del título + apellido
+    // Buscar con formato AND
     const query = disp_construirQuery(item.titulo, item.autor);
     const url = OPAC_BASE + encodeURIComponent(query);
     window.open(url, '_blank');
