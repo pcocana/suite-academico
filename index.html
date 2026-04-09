@@ -1265,14 +1265,12 @@ function disp_cargarDesdeGestor() {
         let titulo = matchTituloHTML ? matchTituloHTML[1].trim() : '';
 
         // 2. Si no tiene <i> (referencias del Extractor), tomar todo lo que va
-        //    después de "(año). " hasta el siguiente ". " seguido de mayúscula+minúscula
-        //    que indica ciudad/editorial (ej: "Paris :", "Reading,")
+        //    después de "(año)" con cualquier separador (. : – -)
+        //    hasta el siguiente ". Mayúscula+minúscula" que indica ciudad/editorial
         if (!titulo) {
-            // Buscar desde después del año
-            const despuesAnio = refLimpia.replace(/^.+?\(\d{4}\)\.\s+/, '');
-            // Cortar antes de la ciudad/editorial: punto + espacio + Mayúscula + minúscula
+            const despuesAnio = refLimpia.replace(/^.+?\(\d{4}\)[.:\s–\-]+/, '');
             const cortarEn = despuesAnio.search(/\.\s+[A-Z][a-z]/);
-            titulo = cortarEn > 0 ? despuesAnio.substring(0, cortarEn).trim() : despuesAnio.split('.')[0].trim();
+            titulo = cortarEn > 0 ? despuesAnio.substring(0, cortarEn).trim() : despuesAnio.split(/[.:]/)[0].trim();
         }
 
         // 3. Fallback final: usar toda la referencia limpia sin autor y año
