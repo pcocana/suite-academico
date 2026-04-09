@@ -79,6 +79,11 @@
                 🔍 Disponibilidad PUCV
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="syllabus-tab" data-bs-toggle="tab" data-bs-target="#syllabus-pane" type="button">
+                📋 Validador de Syllabi
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content">
@@ -318,6 +323,107 @@
             </div>
         </div>
         <!-- FIN Panel Disponibilidad -->
+
+        <!-- VALIDADOR DE SYLLABI -->
+        <div class="tab-pane fade" id="syllabus-pane">
+            <h3 class="mb-1 text-success">📋 Validador de Syllabi</h3>
+            <p class="text-muted mb-4">Sube un programa de asignatura en PDF. El sistema extrae las referencias bibliográficas, las muestra en APA 7 y permite verificar su disponibilidad en el catálogo PUCV.</p>
+
+            <!-- Zona de carga -->
+            <div class="drop-zone" id="syl_dropZone" onclick="document.getElementById('syl_fileInput').click()">
+                <h4>📄 Arrastra el PDF del syllabus aquí</h4>
+                <p class="text-muted mb-2">O haz clic para seleccionar el archivo</p>
+                <input type="file" id="syl_fileInput" accept=".pdf" style="display:none">
+                <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); document.getElementById('syl_fileInput').click()">Seleccionar PDF</button>
+            </div>
+
+            <!-- Info del archivo cargado -->
+            <div id="syl_fileInfo" style="display:none;" class="alert alert-info mt-3 d-flex justify-content-between align-items-center">
+                <span id="syl_fileName">—</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="syl_reiniciar()">✕ Cambiar archivo</button>
+            </div>
+
+            <!-- Progreso -->
+            <div id="syl_progreso" style="display:none;" class="mt-3">
+                <div class="d-flex align-items-center gap-2 text-muted">
+                    <div class="spinner-border spinner-border-sm"></div>
+                    <span id="syl_progresoTxt">Procesando PDF...</span>
+                </div>
+            </div>
+
+            <!-- Resultados -->
+            <div id="syl_resultados" style="display:none;" class="mt-4">
+
+                <!-- Datos detectados del syllabus -->
+                <div class="card mb-3 border-success">
+                    <div class="card-body py-2">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1 small fw-bold text-muted">Asignatura detectada</label>
+                                <input type="text" id="syl_asignatura" class="form-control form-control-sm" placeholder="Editar si es necesario">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label mb-1 small fw-bold text-muted">Docente detectado</label>
+                                <input type="text" id="syl_docente" class="form-control form-control-sm" placeholder="Editar si es necesario">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen semáforo -->
+                <div class="row g-2 mb-3" id="syl_resumenBox" style="display:none;">
+                    <div class="col-6 col-md-3">
+                        <div class="p-2 rounded text-center" style="background:#d1e7dd; border:1px solid #a3cfbb;">
+                            <div class="fw-bold fs-5" id="syl_cnt_disponible">0</div>
+                            <small class="text-success fw-bold">✅ Disponible</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2 rounded text-center" style="background:#fff3cd; border:1px solid #ffe69c;">
+                            <div class="fw-bold fs-5" id="syl_cnt_prestado">0</div>
+                            <small class="text-warning fw-bold">🟡 Prestado</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2 rounded text-center" style="background:#f8d7da; border:1px solid #f1aeb5;">
+                            <div class="fw-bold fs-5" id="syl_cnt_noesta">0</div>
+                            <small class="text-danger fw-bold">🔴 No está</small>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2 rounded text-center" style="background:#e2e3e5; border:1px solid #c4c5c7;">
+                            <div class="fw-bold fs-5" id="syl_cnt_sin">0</div>
+                            <small class="text-muted fw-bold">⬜ Sin verificar</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de referencias -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="5%">#</th>
+                                <th width="42%">Referencia extraída</th>
+                                <th width="20%">Título detectado</th>
+                                <th width="13%">Buscar en PUCV</th>
+                                <th width="13%">Disponibilidad</th>
+                                <th width="7%">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="syl_tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="d-flex gap-2 flex-wrap mt-2">
+                    <button class="btn btn-success" onclick="syl_exportarExcel()">📥 Descargar informe Excel</button>
+                    <button class="btn btn-outline-primary" onclick="syl_enviarAlGestor()">➡️ Enviar referencias al Gestor</button>
+                    <button class="btn btn-outline-danger" onclick="syl_reiniciar()">🗑️ Limpiar</button>
+                </div>
+            </div>
+        </div>
+        <!-- FIN Validador de Syllabi -->
 
     </div>
 </div>
@@ -615,17 +721,119 @@
 
     function gestor_exportarExcel() {
         if(!gestor_refs.length) return alert("Sin datos");
-        const datosLimpios = gestor_refs.map(r => ({
-            "Carrera":    r.Carrera,
-            "Clave":      r.Clave,
-            "Asignatura": r.Asignatura,
-            "Tipo":       r.Tipo,
-            "Referencia": r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.'),
-            "ISBN":       r.ISBN || ''
-        }));
+
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datosLimpios), "Bibliografía");
-        XLSX.writeFile(wb, "Bibliografia_Gestor.xlsx");
+        const ws = {};
+
+        // Detectar carrera (usar la primera que aparezca)
+        const carrera = gestor_refs.find(r => r.Carrera)?.Carrera || '';
+
+        // --- FILA 1: Carrera o Programa ---
+        ws['A1'] = { v: 'Carrera o Programa: ', t: 's', s: { font: { bold: true } } };
+        ws['B1'] = { v: carrera, t: 's' };
+
+        // --- FILA 2: Encabezados principales ---
+        ws['A2'] = { v: 'Clave Asignatura',   t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+        ws['B2'] = { v: 'Nombre Asignatura',  t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+        ws['C2'] = { v: 'Tipo Bibliografía',  t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+        ws['D2'] = { v: 'Referencias',        t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+        ws['E2'] = { v: 'Disponibilidad en Bibliotecas', t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+        ws['J2'] = { v: 'Observaciones',      t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+        ws['K2'] = { v: 'Proveedor',          t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+        ws['L2'] = { v: 'Valor pesos',        t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+
+        // --- FILA 3: Sub-encabezados disponibilidad ---
+        ws['E3'] = { v: 'LIBROS N° de ejemplares (cantidad - año)', t: 's', s: { font: { bold: true, italic: true } } };
+        ws['I3'] = { v: 'Artículo Científico Disponible en (papel - on line)', t: 's', s: { font: { bold: true, italic: true } } };
+
+        // --- FILA 4: Sub-encabezados columnas E-H ---
+        ws['E4'] = { v: 'Btca UA',           t: 's', s: { font: { bold: true } } };
+        ws['F4'] = { v: 'Otras Btcas',       t: 's', s: { font: { bold: true } } };
+        ws['G4'] = { v: 'Total',             t: 's', s: { font: { bold: true } } };
+        ws['H4'] = { v: 'Disponible on line URL', t: 's', s: { font: { bold: true } } };
+
+        // --- DATOS desde fila 5 ---
+        let fila = 5;
+
+        // Agrupar por asignatura para insertar separadores obligatoria/complementaria
+        const porAsignatura = {};
+        gestor_refs.forEach(r => {
+            const key = (r.Clave || '') + '|' + (r.Asignatura || '');
+            if (!porAsignatura[key]) porAsignatura[key] = { clave: r.Clave, asignatura: r.Asignatura, obligatoria: [], complementaria: [] };
+            if ((r.Tipo || '').toLowerCase().includes('comp')) {
+                porAsignatura[key].complementaria.push(r);
+            } else {
+                porAsignatura[key].obligatoria.push(r);
+            }
+        });
+
+        Object.values(porAsignatura).forEach(grupo => {
+            // Obligatorias
+            if (grupo.obligatoria.length) {
+                ws[`C${fila}`] = { v: 'obligatoria', t: 's', s: { font: { italic: true }, fill: { fgColor: { rgb: 'EAF2FB' } } } };
+                fila++;
+                grupo.obligatoria.forEach(r => {
+                    const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
+                    ws[`A${fila}`] = { v: grupo.clave      || '', t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura || '', t: 's' };
+                    ws[`C${fila}`] = { v: 'Básica',               t: 's' };
+                    ws[`D${fila}`] = { v: refLimpia,              t: 's' };
+                    ws[`E${fila}`] = { v: '', t: 's' };
+                    ws[`F${fila}`] = { v: '', t: 's' };
+                    ws[`G${fila}`] = { v: '', t: 's' };
+                    ws[`H${fila}`] = { v: r.ISBN || '', t: 's' };
+                    fila++;
+                });
+                fila++; // línea en blanco
+            }
+
+            // Complementarias
+            if (grupo.complementaria.length) {
+                ws[`C${fila}`] = { v: 'complementaria', t: 's', s: { font: { italic: true }, fill: { fgColor: { rgb: 'EAF2FB' } } } };
+                fila++;
+                grupo.complementaria.forEach(r => {
+                    const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
+                    ws[`A${fila}`] = { v: grupo.clave      || '', t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura || '', t: 's' };
+                    ws[`C${fila}`] = { v: 'Complementaria',       t: 's' };
+                    ws[`D${fila}`] = { v: refLimpia,              t: 's' };
+                    ws[`E${fila}`] = { v: '', t: 's' };
+                    ws[`F${fila}`] = { v: '', t: 's' };
+                    ws[`G${fila}`] = { v: '', t: 's' };
+                    ws[`H${fila}`] = { v: r.ISBN || '', t: 's' };
+                    fila++;
+                });
+                fila++;
+            }
+        });
+
+        // Ancho de columnas
+        ws['!cols'] = [
+            { wch: 16 }, // A Clave
+            { wch: 30 }, // B Asignatura
+            { wch: 16 }, // C Tipo
+            { wch: 70 }, // D Referencias
+            { wch: 12 }, // E Btca UA
+            { wch: 12 }, // F Otras Btcas
+            { wch: 10 }, // G Total
+            { wch: 25 }, // H Online/ISBN
+            { wch: 30 }, // I Art. Científico
+            { wch: 25 }, // J Observaciones
+            { wch: 18 }, // K Proveedor
+            { wch: 14 }, // L Valor
+        ];
+
+        // Fusiones de celdas para encabezados
+        ws['!merges'] = [
+            { s:{r:0,c:0}, e:{r:0,c:11} },  // Fila 1: Carrera (A1:L1)
+            { s:{r:1,c:4}, e:{r:1,c:8} },   // Fila 2: Disponibilidad (E2:I2)
+            { s:{r:2,c:4}, e:{r:2,c:7} },   // Fila 3: LIBROS (E3:H3)
+        ];
+
+        ws['!ref'] = `A1:L${fila}`;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Bibliografías');
+        XLSX.writeFile(wb, `Bibliografia_${carrera || 'PUCV'}.xlsx`);
     }
 </script>
 
@@ -1128,6 +1336,279 @@ function disp_limpiar() {
     disp_items = [];
     disp_renderTabla();
     disp_guardarStorage();
+}
+</script>
+
+<script>
+// ============================================================
+// VALIDADOR DE SYLLABI
+// ============================================================
+let syl_refs = [];
+const OPAC_SYL = 'https://catalogo.pucv.cl/cgi-bin/koha/opac-search.pl?q=';
+
+// Drag & drop
+const syl_dz = document.getElementById('syl_dropZone');
+syl_dz.addEventListener('dragover',  e => { e.preventDefault(); syl_dz.style.backgroundColor='#e6f0ff'; });
+syl_dz.addEventListener('dragleave', e => { e.preventDefault(); syl_dz.style.backgroundColor=''; });
+syl_dz.addEventListener('drop',      e => { e.preventDefault(); syl_dz.style.backgroundColor=''; if(e.dataTransfer.files[0]) syl_procesarPDF(e.dataTransfer.files[0]); });
+document.getElementById('syl_fileInput').addEventListener('change', e => { if(e.target.files[0]) syl_procesarPDF(e.target.files[0]); });
+
+async function syl_procesarPDF(file) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) return alert('Solo se aceptan archivos PDF.');
+    syl_reiniciar(false);
+
+    document.getElementById('syl_fileInfo').style.display = 'flex';
+    document.getElementById('syl_fileName').textContent = `📄 ${file.name}`;
+    document.getElementById('syl_progreso').style.display = 'block';
+    document.getElementById('syl_progresoTxt').textContent = 'Leyendo PDF...';
+
+    try {
+        const typedarray = new Uint8Array(await file.arrayBuffer());
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+
+        let textoCompleto = '';
+        document.getElementById('syl_progresoTxt').textContent = `Extrayendo texto (0 / ${pdf.numPages} páginas)...`;
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page  = await pdf.getPage(i);
+            const tc    = await page.getTextContent();
+            textoCompleto += tc.items.map(it => it.str).join(' ') + '\n';
+            document.getElementById('syl_progresoTxt').textContent = `Extrayendo texto (${i} / ${pdf.numPages} páginas)...`;
+        }
+
+        document.getElementById('syl_progresoTxt').textContent = 'Analizando referencias...';
+
+        // Detectar asignatura y docente
+        const asignatura = syl_detectarAsignatura(textoCompleto, file.name);
+        const docente    = syl_detectarDocente(textoCompleto);
+        document.getElementById('syl_asignatura').value = asignatura;
+        document.getElementById('syl_docente').value    = docente;
+
+        // Extraer referencias
+        syl_refs = syl_extraerReferencias(textoCompleto);
+
+        document.getElementById('syl_progreso').style.display = 'none';
+
+        if (syl_refs.length === 0) {
+            alert('No se detectaron referencias bibliográficas en este PDF. Puede que el texto no sea seleccionable (PDF escaneado) o que las referencias tengan un formato inusual.');
+            return;
+        }
+
+        document.getElementById('syl_resultados').style.display = 'block';
+        syl_renderTabla();
+
+    } catch(e) {
+        document.getElementById('syl_progreso').style.display = 'none';
+        alert('Error al procesar el PDF: ' + e.message);
+    }
+}
+
+function syl_detectarAsignatura(texto, nombreArchivo) {
+    // Patrones comunes en syllabi chilenos
+    const patrones = [
+        /asignatura[:\s]+([^\n\r]{5,80})/i,
+        /nombre de la asignatura[:\s]+([^\n\r]{5,80})/i,
+        /denominaci[oó]n[:\s]+([^\n\r]{5,80})/i,
+        /programa[:\s]+([^\n\r]{5,80})/i,
+        /curso[:\s]+([^\n\r]{5,80})/i,
+    ];
+    for (const p of patrones) {
+        const m = texto.match(p);
+        if (m) return m[1].trim().substring(0, 80);
+    }
+    // Fallback: nombre del archivo sin extensión
+    return nombreArchivo.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ').trim();
+}
+
+function syl_detectarDocente(texto) {
+    const patrones = [
+        /docente[:\s]+([^\n\r]{5,60})/i,
+        /profesor[a]?[:\s]+([^\n\r]{5,60})/i,
+        /académico[:\s]+([^\n\r]{5,60})/i,
+        /responsable[:\s]+([^\n\r]{5,60})/i,
+        /coordinador[a]?[:\s]+([^\n\r]{5,60})/i,
+    ];
+    for (const p of patrones) {
+        const m = texto.match(p);
+        if (m) return m[1].trim().substring(0, 60);
+    }
+    return '';
+}
+
+function syl_extraerReferencias(texto) {
+    const refs = [];
+    const vistas = new Set();
+
+    // Buscar sección de bibliografía
+    const seccionMatch = texto.match(
+        /(?:bibliograf[ií]a|referencias bibliogr[aá]ficas?|fuentes bibliogr[aá]ficas?|material bibliogr[aá]fico|lecturas?\s+(?:recomendadas?|obligatorias?|complementarias?))[:\s\n]+([\s\S]{100,4000}?)(?=\n{3,}|\d{1,2}\.\s+[A-Z]|objetivos|metodolog[ií]a|evaluaci[oó]n|contenidos|$)/gi
+    );
+
+    let bloque = '';
+    if (seccionMatch) {
+        bloque = seccionMatch[0];
+    } else {
+        // Si no hay sección clara, usar todo el texto
+        bloque = texto;
+    }
+
+    // Patrones de referencias APA / variantes comunes
+    const patrones = [
+        // Apellido, N. (año). Título...
+        /([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü\-]+,\s+[A-ZÁÉÍÓÚÑÜ][\w\.\s&,]+\(\d{4}\)\.\s+[^\n\r]{20,300})/g,
+        // Apellido, N. & Apellido (año)...
+        /([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü\-]+,\s+[A-Z][\w\.\s&,y]+\s+\(\d{4}\)[^\n\r]{15,300})/g,
+        // Líneas que empiezan con autor y año visible
+        /([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,\s]+[A-Z]\.\s*[\(\d][^\n\r]{30,300})/g,
+    ];
+
+    for (const patron of patrones) {
+        let m;
+        while ((m = patron.exec(bloque)) !== null) {
+            const ref = m[1].trim().replace(/\s{2,}/g, ' ');
+            const clave = ref.substring(0, 50).toLowerCase();
+            if (ref.length > 25 && !vistas.has(clave)) {
+                vistas.add(clave);
+                refs.push({ texto: ref, titulo: syl_extraerTitulo(ref), estado: 'sin' });
+            }
+        }
+    }
+
+    // Si los patrones estrictos dieron pocos resultados, extraer por líneas largas en el bloque
+    if (refs.length < 3 && bloque.length > 200) {
+        const lineas = bloque.split(/\n/);
+        for (const linea of lineas) {
+            const l = linea.trim();
+            if (l.length > 40 && /\d{4}/.test(l)) {
+                const clave = l.substring(0, 50).toLowerCase();
+                if (!vistas.has(clave)) {
+                    vistas.add(clave);
+                    refs.push({ texto: l, titulo: syl_extraerTitulo(l), estado: 'sin' });
+                }
+            }
+        }
+    }
+
+    return refs.slice(0, 60); // máximo 60 referencias por syllabus
+}
+
+function syl_extraerTitulo(ref) {
+    // Intentar extraer título entre paréntesis de año y punto/editorial
+    const m1 = ref.match(/\(\d{4}\)\.\s+([^\.]{10,120})/);
+    if (m1) return m1[1].trim();
+    // Fallback: primeras 80 chars después del año
+    const m2 = ref.match(/\d{4}[).\s]+(.{10,80})/);
+    if (m2) return m2[1].trim();
+    return ref.substring(0, 60);
+}
+
+function syl_renderTabla() {
+    const tbody = document.getElementById('syl_tbody');
+    tbody.innerHTML = '';
+    syl_refs.forEach((r, i) => {
+        const cls = r.estado === 'disponible' ? 'table-success'
+                  : r.estado === 'prestado'   ? 'table-warning'
+                  : r.estado === 'noesta'     ? 'table-danger' : '';
+        tbody.innerHTML += `
+            <tr class="${cls}">
+                <td class="text-center text-muted small">${i+1}</td>
+                <td><small>${r.texto}</small></td>
+                <td><small class="text-muted">${r.titulo}</small></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary w-100" onclick="syl_buscar(${i})">🔍 Buscar</button>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" onchange="syl_setEstado(${i}, this.value)">
+                        <option value="sin"        ${r.estado==='sin'        ?'selected':''}>⬜ Sin verificar</option>
+                        <option value="disponible" ${r.estado==='disponible' ?'selected':''}>✅ Disponible</option>
+                        <option value="prestado"   ${r.estado==='prestado'   ?'selected':''}>🟡 Prestado</option>
+                        <option value="noesta"     ${r.estado==='noesta'     ?'selected':''}>🔴 No está</option>
+                    </select>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-danger" onclick="syl_eliminar(${i})">✕</button>
+                </td>
+            </tr>`;
+    });
+    syl_actualizarResumen();
+}
+
+function syl_buscar(i) {
+    const titulo = syl_refs[i].titulo || syl_refs[i].texto.substring(0, 60);
+    window.open(OPAC_SYL + encodeURIComponent(titulo), '_blank');
+}
+
+function syl_setEstado(i, estado) {
+    syl_refs[i].estado = estado;
+    syl_renderTabla();
+}
+
+function syl_eliminar(i) {
+    syl_refs.splice(i, 1);
+    syl_renderTabla();
+}
+
+function syl_actualizarResumen() {
+    const cnts = { disponible:0, prestado:0, noesta:0, sin:0 };
+    syl_refs.forEach(r => cnts[r.estado]++);
+    document.getElementById('syl_cnt_disponible').textContent = cnts.disponible;
+    document.getElementById('syl_cnt_prestado').textContent   = cnts.prestado;
+    document.getElementById('syl_cnt_noesta').textContent     = cnts.noesta;
+    document.getElementById('syl_cnt_sin').textContent        = cnts.sin;
+    document.getElementById('syl_resumenBox').style.display   = syl_refs.length ? 'flex' : 'none';
+}
+
+function syl_exportarExcel() {
+    if (!syl_refs.length) return alert('No hay referencias para exportar.');
+    const asignatura = document.getElementById('syl_asignatura').value;
+    const docente    = document.getElementById('syl_docente').value;
+    const estadoTxt  = { sin:'Sin verificar', disponible:'Disponible', prestado:'Prestado / Revisar', noesta:'No está en catálogo' };
+    const datos = syl_refs.map((r, i) => ({
+        'N°':            i + 1,
+        'Asignatura':    asignatura,
+        'Docente':       docente,
+        'Referencia':    r.texto,
+        'Título detectado': r.titulo,
+        'Disponibilidad':   estadoTxt[r.estado],
+        'URL Catálogo PUCV': OPAC_SYL + encodeURIComponent(r.titulo)
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datos), 'Validación Syllabus');
+    XLSX.writeFile(wb, `Validacion_${asignatura || 'Syllabus'}.xlsx`);
+}
+
+function syl_enviarAlGestor() {
+    if (!syl_refs.length) return alert('No hay referencias para enviar.');
+    const asignatura = document.getElementById('syl_asignatura').value;
+    const clave      = '';
+    const carrera    = '';
+    syl_refs.forEach(r => {
+        gestor_refs.push({
+            Carrera:    carrera,
+            Clave:      clave,
+            Asignatura: asignatura,
+            Tipo:       'Básica',
+            Referencia: r.texto,
+            ISBN:       ''
+        });
+    });
+    gestor_guardarStorage();
+    gestor_renderTabla();
+    alert(`✅ ${syl_refs.length} referencia(s) enviadas al Gestor Principal.`);
+    document.getElementById('gestor-tab').click();
+}
+
+function syl_reiniciar(limpiarTodo = true) {
+    if (limpiarTodo) {
+        syl_refs = [];
+        document.getElementById('syl_fileInput').value = '';
+        document.getElementById('syl_fileInfo').style.display  = 'none';
+        document.getElementById('syl_resultados').style.display = 'none';
+        document.getElementById('syl_resumenBox').style.display = 'none';
+        document.getElementById('syl_asignatura').value = '';
+        document.getElementById('syl_docente').value    = '';
+        document.getElementById('syl_tbody').innerHTML  = '';
+    }
+    document.getElementById('syl_progreso').style.display = 'none';
 }
 </script>
 
