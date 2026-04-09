@@ -715,8 +715,9 @@
             } else if (ext === 'docx') {
                 reader.onload = async function() {
                     try {
-                        const result = await mammoth.extractRawText({ arrayBuffer: this.result });
-                        extraerYAcumular(result.value, file.name);
+                        // Usar párrafos individuales para respetar la estructura del documento
+                        const result = await mammoth.convertToHtml({ arrayBuffer: this.result });
+                        extraerYAcumularDocx(result.value, file.name);
                     } catch (e) { console.error(e); }
                 };
                 reader.readAsArrayBuffer(file);
@@ -724,80 +725,123 @@
         });
     }
 
-    // FUNCIÓN CORE CORREGIDA
-    function extraerYAcumular(texto, filename) {
-        texto = texto.replace(/\r/g, '\n').replace(/\t/g, ' ');
-        let carrera = ""; let clave = ""; let nombre = "";
-        
-        const matchClave = texto.match(/(?:Sigla|Código|Asignatura|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i);
-        if (matchClave) clave = matchClave[1].trim();
+    // Extractor específico para DOCX — usa párrafos HTML para respetar estructura
+    function extraerYAcumularDocx(html, filename) {
+        // Parsear HTML a párrafos
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        const parrafos = Array.from(div.querySelectorAll('p, li')).map(el => el.textContent.trim()).filter(t => t.length > 0);
 
-        const matchCarrera = texto.match(/(?:Carrera|Programa)[:\s]+([^\n\r]+)/i);
-        if (matchCarrera) carrera = matchCarrera[1].trim().substring(0, 60);
+        let carrera = '', clave = '', nombre = '';
 
-        const matchNombre = texto.match(/(?:Nombre de la asignatura|Asignatura|Nombre del Curso|Nombre del curso)[:\s,"]+([^\n\r]+?)(?=\n|\r|Descripción|Objetivos|Sigla|Código|Créditos|$|")/i);
-        if (matchNombre) {
-            nombre = matchNombre[1].trim().replace(/^"|"$/g, '');
-        }
+        // Detectar metadatos del documento
+        parrafos.forEach(p => {
+            if (/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i.test(p)) {
+                const m = p.match(/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i);
+                if (m) clave = m[1].trim();
+            }
+            if (/^Asignatura\s+([A-Z]{2,4}\s*\d{3,5})/i.test(p)) {
+                const m = p.match(/^Asignatura\s+([A-Z]{2,4}\s*\d{3,5})\s*[:\t]+\s*(.+)/i);
+                if (m) { clave = m[1].trim(); nombre = m[2].trim(); }
+            }
+            if (/(?:^|\s)Carrera[:\s]+(.+)/i.test(p) && !carrera) {
+                const m = p.match(/Carrera[:\s]+(.+)/i);
+                if (m) carrera = m[1].trim().substring(0, 60);
+            }
+        });
 
-        if (nombre.length > 100 || !nombre) {
-            nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
-        }
+        if (!nombre) nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
 
-        const idxBiblio = texto.search(/(?:Bibliografía|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)/i);
-        if (idxBiblio === -1) return;
-        
-        const textoBiblio = texto.substring(idxBiblio);
+        // Encontrar sección bibliografía y procesar párrafo a párrafo
+        let enBiblio = false;
+        let tipoActual = 'Básica';
 
-        // Detectar bloques — ampliar patrones para cubrir "Obligatoria", "Recomendada", "Básica", "Complementaria"
-        let idxBasica = textoBiblio.search(/(?:Bibliografía\s+(?:Obligatoria|Básica)|(?:^|\s)(?:Obligatoria|Básica|Recomendada)(?:\s|:))/im);
-        let idxComp   = textoBiblio.search(/(?:Bibliografía\s+Complementaria|(?:^|\s)(?:Complementaria|Adicional)(?:\s|:))/im);
-        
-        if (idxBasica === -1) idxBasica = 0;
-        let bloqueBasica = ""; let bloqueComp = "";
-        
-        if (idxComp !== -1 && idxComp > idxBasica) {
-            bloqueBasica = textoBiblio.substring(idxBasica, idxComp);
-            bloqueComp   = textoBiblio.substring(idxComp);
-        } else {
-            bloqueBasica = textoBiblio.substring(idxBasica);
-        }
+        const esTituloBiblio = t => /^(?:Bibliografía|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)$/i.test(t);
+        const esTipoBasica   = t => /^(?:Básica|Obligatoria|Recomendada\s+Básica)$/i.test(t);
+        const esTipoComp     = t => /^(?:Complementaria|Adicional|Recomendada)$/i.test(t);
+        const esReferencia   = t => t.length > 30 && /\d{4}|s\.f\./.test(t);
 
-        const refsBasicas = segmentarReferencias(bloqueBasica);
-        const refsComp    = segmentarReferencias(bloqueComp);
-        
-        // Normalizar tipo: todo lo básico/obligatorio/recomendado → "Básica"
-        //                  todo lo complementario/adicional         → "Complementaria"
-        const agregar = (lista, tipo) => {
-            lista.forEach(r => {
-                const refLimpia = r.trim().replace(/\s*\.+\s*\.+/g, '.');
-                if (refLimpia.length < 15) return;
-                ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo, ref: refLimpia, status: validarCalidad(refLimpia) });
-            });
-        };
-        
-        agregar(refsBasicas, 'Básica');
-        agregar(refsComp, 'Complementaria');
+        parrafos.forEach(p => {
+            if (esTituloBiblio(p)) { enBiblio = true; return; }
+            if (!enBiblio) return;
+
+            if (esTipoBasica(p))   { tipoActual = 'Básica';         return; }
+            if (esTipoComp(p))     { tipoActual = 'Complementaria'; return; }
+
+            if (esReferencia(p)) {
+                const refLimpia = p.replace(/\s*\.+\s*\.+/g, '.').trim();
+                ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: refLimpia, status: validarCalidad(refLimpia) });
+            }
+        });
+
         ext_updateView();
     }
 
-    // VERSIÓN DEFINITIVA: ESTRATEGIA DE APLANADO
-    function segmentarReferencias(bloque) {
-        if (!bloque) return [];
-        let limpio = bloque.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ');
-        // Limpiar etiquetas de sección
-        limpio = limpio.replace(/(Bibliografía|Referencias|Obligatoria|Básica|Complementaria|Adicional|Recomendada|Textos?\s+Guías?)/gi, '').replace(/"/g, ''); 
-        // Inyectar separadores
-        limpio = limpio.replace(/\s(\d{1,2}[.\-\)]+\s+)/g, '###SPLIT###$1');
-        limpio = limpio.replace(/\s(\[\d+\])/g, '###SPLIT###$1');
-        limpio = limpio.replace(/\s([•\-])\s+/g, '###SPLIT###$1 ');
-        limpio = limpio.replace(/\.\s+([A-Z][a-záéíóúñ]+\s*,\s+[A-Z]\.)/g, '.###SPLIT###$1');
-        return limpio.split('###SPLIT###').map(x => x.trim()).filter(x => {
-            if (x.length < 10) return false; 
-            if (/^\d+$/.test(x)) return false; 
-            if (x.length < 40 && !/\d{4}/.test(x) && !/s\.f/.test(x)) return false; 
-            return true;
+    // FUNCIÓN CORE PARA PDF — procesa línea a línea respetando estructura
+    function extraerYAcumular(texto, filename) {
+        texto = texto.replace(/\r/g, '\n').replace(/\t/g, ' ');
+        const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        let carrera = '', clave = '', nombre = '';
+
+        lineas.forEach(l => {
+            if (!clave && /(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i.test(l)) {
+                const m = l.match(/(?:Sigla|Código|Clave)[:\s,]+([A-Z]{2,4}\s*\d{3,5})/i);
+                if (m) clave = m[1].trim();
+            }
+            if (!nombre && /(?:Nombre de la asignatura|Asignatura|Nombre del Curso)[:\s,"]+(.+)/i.test(l)) {
+                const m = l.match(/(?:Nombre de la asignatura|Asignatura|Nombre del Curso)[:\s,"]+(.+)/i);
+                if (m) nombre = m[1].trim().replace(/^"|"$/g, '').substring(0, 80);
+            }
+            if (!carrera && /Carrera[:\s]+(.+)/i.test(l)) {
+                const m = l.match(/Carrera[:\s]+(.+)/i);
+                if (m) carrera = m[1].trim().substring(0, 60);
+            }
         });
+
+        if (!nombre || nombre.length > 100)
+            nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
+
+        // Encontrar inicio de bibliografía
+        let idxBiblio = -1;
+        for (let i = 0; i < lineas.length; i++) {
+            if (/^(?:Bibliografía|Referencias\s*Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)$/i.test(lineas[i])) {
+                idxBiblio = i; break;
+            }
+        }
+        if (idxBiblio === -1) {
+            for (let i = 0; i < lineas.length; i++) {
+                if (/Bibliografía|Referencias\s+Bibliográficas?/i.test(lineas[i])) {
+                    idxBiblio = i; break;
+                }
+            }
+        }
+        if (idxBiblio === -1) return;
+
+        const esTipoBasica = t => /^(?:Básica|Obligatoria|Recomendada\s+Básica)$/i.test(t);
+        const esTipoComp   = t => /^(?:Complementaria|Adicional|Recomendada)$/i.test(t);
+        const iniciaRef    = t => /^[A-ZÁÉÍÓÚÑÜ]/.test(t) && t.length > 20 && /\d{4}|s\.f\./.test(t);
+
+        let tipoActual = 'Básica';
+        let refActual  = '';
+
+        const guardarRef = () => {
+            if (refActual.length > 30) {
+                const limpia = refActual.replace(/\s*\.+\s*\.+/g, '.').trim();
+                ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: limpia, status: validarCalidad(limpia) });
+            }
+            refActual = '';
+        };
+
+        for (let i = idxBiblio + 1; i < lineas.length; i++) {
+            const l = lineas[i];
+            if (esTipoBasica(l)) { guardarRef(); tipoActual = 'Básica';         continue; }
+            if (esTipoComp(l))   { guardarRef(); tipoActual = 'Complementaria'; continue; }
+            if (iniciaRef(l) && refActual.length > 0) guardarRef();
+            if (l.length > 5) refActual += (refActual ? ' ' : '') + l;
+        }
+        guardarRef();
+        ext_updateView();
     }
 
     function validarCalidad(ref) {
