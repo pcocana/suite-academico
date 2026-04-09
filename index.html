@@ -103,14 +103,6 @@
                     <button class="btn btn-magic" type="button" onclick="gestor_buscarMetadatos()" id="btnBuscar">🪄 Buscar y Rellenar</button>
                 </div>
                 <small class="text-muted">El sistema corrige automáticamente títulos en mayúsculas y elimina textos comerciales.</small>
-                <!-- Historial de búsquedas -->
-                <div id="historialBox" style="display:none; margin-top:10px;">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <small class="fw-bold text-secondary">🕓 Historial de búsquedas</small>
-                        <button class="btn btn-link btn-sm text-danger p-0" onclick="gestor_limpiarHistorial()">Limpiar historial</button>
-                    </div>
-                    <div id="historialLista" class="d-flex flex-wrap gap-2"></div>
-                </div>
             </div>
 
             <div class="row g-3">
@@ -504,18 +496,6 @@
         finally { btn.innerHTML = '🪄 Buscar y Rellenar'; btn.disabled = false; }
     }
 
-    // --- Persistencia Gestor ---
-    function gestor_guardarStorage() {
-        try { localStorage.setItem('gestor_refs', JSON.stringify(gestor_refs)); } catch(e) {}
-    }
-    function gestor_cargarStorage() {
-        try {
-            const saved = localStorage.getItem('gestor_refs');
-            if (saved) { gestor_refs = JSON.parse(saved); gestor_renderTabla(); }
-        } catch(e) {}
-    }
-    document.addEventListener('DOMContentLoaded', gestor_cargarStorage);
-
     function gestor_agregarReferencia() {
         const tipo = document.getElementById('tipoRecurso').value;
         if(!tipo) return;
@@ -551,7 +531,6 @@
         const isbn = isbnEl ? isbnEl.value.trim() : '';
         
         gestor_refs.push({ "Carrera":document.getElementById('g_carrera').value, "Clave":document.getElementById('g_clave').value, "Asignatura":document.getElementById('g_nombre').value, "Tipo":document.getElementById('tipoBiblio').value, "Referencia": ref, "ISBN": isbn });
-        gestor_guardarStorage();
         gestor_renderTabla();
         document.getElementById('camposDinamicos').innerHTML='';
         document.getElementById('tipoRecurso').value='';
@@ -568,50 +547,7 @@
                 <td><button class="btn btn-sm btn-danger" onclick="gestor_eliminar(${i})">X</button></td>
             </tr>`);
     }
-    function gestor_eliminar(i) { gestor_refs.splice(i,1); gestor_guardarStorage(); gestor_renderTabla(); }
-    
-    // --- Historial de búsquedas ---
-    let gestor_historial = [];
-
-    function gestor_cargarHistorial() {
-        try {
-            const saved = localStorage.getItem('gestor_historial');
-            if (saved) { gestor_historial = JSON.parse(saved); gestor_renderHistorial(); }
-        } catch(e) {}
-    }
-    function gestor_guardarHistorial() {
-        try { localStorage.setItem('gestor_historial', JSON.stringify(gestor_historial)); } catch(e) {}
-    }
-    function gestor_agregarHistorial(query, titulo) {
-        // Evitar duplicado exacto del mismo query
-        gestor_historial = gestor_historial.filter(h => h.query !== query);
-        gestor_historial.unshift({ query, titulo, fecha: new Date().toLocaleDateString('es-CL') });
-        if (gestor_historial.length > 20) gestor_historial.pop(); // máximo 20 entradas
-        gestor_guardarHistorial();
-        gestor_renderHistorial();
-    }
-    function gestor_renderHistorial() {
-        const box = document.getElementById('historialBox');
-        const lista = document.getElementById('historialLista');
-        if (!gestor_historial.length) { box.style.display = 'none'; return; }
-        box.style.display = 'block';
-        lista.innerHTML = '';
-        gestor_historial.forEach(h => {
-            lista.innerHTML += `
-                <span class="badge rounded-pill text-bg-light border" style="cursor:pointer; font-weight:400; font-size:.8rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
-                    title="${h.titulo} — ${h.fecha}"
-                    onclick="document.getElementById('inputMagic').value='${h.query.replace(/'/g,"\\'")}'; gestor_buscarMetadatos();">
-                    🔍 ${h.query} <span style="color:#888;">· ${h.titulo.substring(0,30)}${h.titulo.length>30?'…':''}</span>
-                </span>`;
-        });
-    }
-    function gestor_limpiarHistorial() {
-        if (!confirm('¿Limpiar todo el historial de búsquedas?')) return;
-        gestor_historial = [];
-        gestor_guardarHistorial();
-        gestor_renderHistorial();
-    }
-    document.addEventListener('DOMContentLoaded', gestor_cargarHistorial);
+    function gestor_eliminar(i) { gestor_refs.splice(i,1); gestor_renderTabla(); }
 
     function gestor_exportarExcel() {
         if(!gestor_refs.length) return alert("Sin datos");
@@ -1086,16 +1022,6 @@ const DISP_ESTADOS = {
     'noesta':     { label: '🔴 No está en catálogo', cls: 'table-danger' },
 };
 
-function disp_guardarStorage() {
-    try { localStorage.setItem('disp_items', JSON.stringify(disp_items)); } catch(e) {}
-}
-function disp_cargarStorage() {
-    try {
-        const saved = localStorage.getItem('disp_items');
-        if (saved) { disp_items = JSON.parse(saved); disp_renderTabla(); }
-    } catch(e) {}
-}
-document.addEventListener('DOMContentLoaded', disp_cargarStorage);
 
 function disp_agregarManual() {
     const titulo = document.getElementById('disp_titulo').value.trim();
@@ -1107,7 +1033,6 @@ function disp_agregarManual() {
     document.getElementById('disp_autor').value  = '';
     document.getElementById('disp_anio').value   = '';
     disp_renderTabla();
-    disp_guardarStorage();
 }
 
 function disp_cargarDesdeGestor() {
@@ -1142,7 +1067,6 @@ function disp_cargarDesdeGestor() {
         if (!existe) { disp_items.push({ titulo, autor, anio, estado: 'sin' }); agregados++; }
     });
     disp_renderTabla();
-    disp_guardarStorage();
     alert(`\u2705 ${agregados} libro(s) importados desde el Gestor.`);
 }
 
@@ -1162,13 +1086,11 @@ function disp_buscarEnCatalogo(idx) {
 function disp_setEstado(idx, estado) {
     disp_items[idx].estado = estado;
     disp_renderTabla();
-    disp_guardarStorage();
 }
 
 function disp_eliminar(idx) {
     disp_items.splice(idx, 1);
     disp_renderTabla();
-    disp_guardarStorage();
 }
 
 function disp_renderTabla() {
@@ -1236,7 +1158,6 @@ function disp_limpiar() {
     if (!confirm('¿Limpiar toda la lista de disponibilidad?')) return;
     disp_items = [];
     disp_renderTabla();
-    disp_guardarStorage();
 }
 </script>
 
