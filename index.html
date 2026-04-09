@@ -765,7 +765,7 @@
         const esTituloBiblio = t => /^(?:Bibliografía|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)$/i.test(t);
         const esTipoBasica   = t => /^(?:Básica|Obligatoria|Recomendada\s+Básica)$/i.test(t);
         const esTipoComp     = t => /^(?:Complementaria|Adicional|Recomendada)$/i.test(t);
-        const esReferencia   = t => t.length > 30 && /\d{4}|s\.f\./.test(t);
+        const esReferencia   = t => t.length > 30 && /\d{4}|s\.f\./.test(t) && /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,},\s+[A-ZÁÉÍÓÚÑÜ]/.test(t);
 
         parrafos.forEach(p => {
             if (esTituloBiblio(p)) { enBiblio = true; return; }
@@ -826,7 +826,9 @@
 
         const esTipoBasica = t => /^(?:Básica|Obligatoria|Recomendada\s+Básica)$/i.test(t);
         const esTipoComp   = t => /^(?:Complementaria|Adicional|Recomendada)$/i.test(t);
-        const iniciaRef    = t => /^[A-ZÁÉÍÓÚÑÜ]/.test(t) && t.length > 20 && /\d{4}|s\.f\./.test(t);
+        // Referencia APA real: debe empezar con Apellido, Inicial. o Apellido, Nombre
+        // NO cortar por palabras sueltas en mayúscula (títulos, lugares, etc.)
+        const iniciaRef    = t => /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,},\s+[A-ZÁÉÍÓÚÑÜ]/.test(t) && /\d{4}|s\.f\./.test(t);
 
         let tipoActual = 'Básica';
         let refActual  = '';
