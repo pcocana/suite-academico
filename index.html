@@ -1249,24 +1249,33 @@ function disp_cargarDesdeGestor() {
     let agregados = 0;
     gestor_refs.forEach(r => {
         const ref = r.Referencia || '';
-
-        // Extraer título: entre <i> y </i>
-        const matchTitulo = ref.match(/<i>([^<]+)<\/i>/);
-        let titulo = matchTitulo ? matchTitulo[1].trim() : '';
-
-        // Fallback: texto entre el año y el primer punto
-        if (!titulo) {
-            const matchFallback = ref.match(/\(\d{4}\)\.\s*(.+?)\./);
-            titulo = matchFallback ? matchFallback[1].trim() : ref.replace(/<[^>]*>/g, '').substring(0, 80);
-        }
+        const refLimpia = ref.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
         // Extraer autor: antes del primer "("
-        const matchAutor = ref.match(/^\s*([^(]+)\s*\(/);
+        const matchAutor = refLimpia.match(/^\s*([^(]+)\s*\(/);
         const autor = matchAutor ? matchAutor[1].trim() : '';
 
         // Extraer año
-        const matchAnio = ref.match(/\((\d{4})\)/);
+        const matchAnio = refLimpia.match(/\((\d{4})\)/);
         const anio = matchAnio ? matchAnio[1] : '';
+
+        // Extraer título:
+        // 1. Si tiene etiqueta <i> (referencias del Gestor manual)
+        const matchTituloHTML = ref.match(/<i>([^<]+)<\/i>/);
+        let titulo = matchTituloHTML ? matchTituloHTML[1].trim() : '';
+
+        // 2. Si no tiene <i> (referencias del Extractor), tomar todo lo que va
+        //    después de "(año). " hasta el siguiente punto seguido de espacio y mayúscula
+        //    o hasta el final de la referencia
+        if (!titulo) {
+            const matchTitulo = refLimpia.match(/\(\d{4}\)\.\s+(.+?)(?:\.\s+[A-ZÁÉÍÓÚÑÜ][a-z]|\.$|$)/);
+            titulo = matchTitulo ? matchTitulo[1].trim() : '';
+        }
+
+        // 3. Fallback final: usar toda la referencia limpia sin autor y año
+        if (!titulo) {
+            titulo = refLimpia.replace(/^[^(]+\(\d{4}\)\.\s*/, '').substring(0, 100);
+        }
 
         if (!titulo) return;
 
