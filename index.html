@@ -214,11 +214,14 @@
                             <div class="col-md-3"><label class="form-label small">Carrera</label><input type="text" id="imp_carrera" class="form-control form-control-sm" placeholder="Ej. Pedagogía en Matemática"></div>
                             <div class="col-md-2"><label class="form-label small">Clave</label><input type="text" id="imp_clave" class="form-control form-control-sm" placeholder="Ej. IMA 1001"></div>
                             <div class="col-md-4"><label class="form-label small">Asignatura</label><input type="text" id="imp_asignatura" class="form-control form-control-sm" placeholder="Ej. Cálculo I"></div>
-                            <div class="col-md-3"><label class="form-label small">Tipo Bibliografía</label>
-                                <select id="imp_tipo" class="form-select form-select-sm" onchange="imp_aplicarTipoGlobal(this.value)">
-                                    <option value="Básica">Básica</option>
-                                    <option value="Complementaria">Complementaria</option>
-                                </select>
+                            <div class="col-md-3"><label class="form-label small">Aplicar tipo a todas</label>
+                                <div class="input-group input-group-sm">
+                                    <select id="imp_tipo" class="form-select form-select-sm">
+                                        <option value="Básica">Básica</option>
+                                        <option value="Complementaria">Complementaria</option>
+                                    </select>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="imp_aplicarTipoGlobal(document.getElementById('imp_tipo').value)" title="Aplicar a todas las filas">↓ Todas</button>
+                                </div>
                             </div>
                         </div>
                     </div>
