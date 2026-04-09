@@ -1307,7 +1307,7 @@ function disp_buscarEnCatalogo(idx) {
         const palabras = disp_normalizarQuery(titulo)
             .split(' ')
             .filter(p => p.length > 3 && !stopwords.has(p.toLowerCase()))
-            .slice(0, 2);
+            .slice(0, 1);
         return [apellido, ...palabras].filter(Boolean).join(' & ');
     }
 
