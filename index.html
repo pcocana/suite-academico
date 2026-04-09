@@ -754,33 +754,36 @@
         // --- DATOS desde fila 5 ---
         let fila = 5;
 
-        // Agrupar por asignatura
+        // Agrupar por asignatura — normalizar clave para evitar grupos separados por datos vacíos
         const grupos = {};
         gestor_refs.forEach(r => {
-            const key = (r.Clave || '') + '||' + (r.Asignatura || '');
+            // Usar clave+asignatura, pero si alguna está vacía usar lo que haya
+            const clave      = (r.Clave      || '').trim();
+            const asignatura = (r.Asignatura || '').trim();
+            const key = clave + '||' + asignatura;
             if (!grupos[key]) grupos[key] = {
-                clave:          r.Clave      || '',
-                asignatura:     r.Asignatura || '',
-                obligatoria:    [],
+                clave,
+                asignatura,
+                basica:         [],
                 complementaria: []
             };
             if ((r.Tipo || '').toLowerCase().includes('comp')) {
                 grupos[key].complementaria.push(r);
             } else {
-                grupos[key].obligatoria.push(r);
+                grupos[key].basica.push(r);
             }
         });
 
         Object.values(grupos).forEach(grupo => {
-            // Bloque OBLIGATORIA / BÁSICA
-            if (grupo.obligatoria.length) {
-                ws[`C${fila}`] = { v: 'obligatoria', t: 's' };
+            // Bloque BÁSICA
+            if (grupo.basica.length) {
+                ws[`C${fila}`] = { v: 'básica', t: 's' };
                 fila++;
-                grupo.obligatoria.forEach(r => {
+                grupo.basica.forEach(r => {
                     const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
                     ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
                     ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
-                    ws[`C${fila}`] = { v: '',               t: 's' };  // vacío — ya dice "obligatoria" arriba
+                    ws[`C${fila}`] = { v: '',               t: 's' };
                     ws[`D${fila}`] = { v: refLimpia,        t: 's' };
                     ws[`E${fila}`] = { v: '',               t: 's' };
                     ws[`F${fila}`] = { v: '',               t: 's' };
@@ -788,7 +791,7 @@
                     ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
                     fila++;
                 });
-                fila++; // fila en blanco entre bloques
+                fila++;
             }
 
             // Bloque COMPLEMENTARIA
