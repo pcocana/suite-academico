@@ -725,82 +725,86 @@
         const wb = XLSX.utils.book_new();
         const ws = {};
 
-        // Detectar carrera (usar la primera que aparezca)
-        const carrera = gestor_refs.find(r => r.Carrera)?.Carrera || '';
+        // Detectar carrera (usar la primera no vacía)
+        const carrera = gestor_refs.find(r => r.Carrera && r.Carrera.trim())?.Carrera?.trim() || '';
 
         // --- FILA 1: Carrera o Programa ---
-        ws['A1'] = { v: 'Carrera o Programa: ', t: 's', s: { font: { bold: true } } };
-        ws['B1'] = { v: carrera, t: 's' };
+        ws['A1'] = { v: 'Carrera o Programa: ' + carrera, t: 's' };
 
         // --- FILA 2: Encabezados principales ---
-        ws['A2'] = { v: 'Clave Asignatura',   t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
-        ws['B2'] = { v: 'Nombre Asignatura',  t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
-        ws['C2'] = { v: 'Tipo Bibliografía',  t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
-        ws['D2'] = { v: 'Referencias',        t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
-        ws['E2'] = { v: 'Disponibilidad en Bibliotecas', t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
-        ws['J2'] = { v: 'Observaciones',      t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
-        ws['K2'] = { v: 'Proveedor',          t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
-        ws['L2'] = { v: 'Valor pesos',        t: 's', s: { font: { bold: true }, fill: { fgColor: { rgb: 'D9D9D9' } } } };
+        ws['A2'] = { v: 'Clave Asignatura',              t: 's' };
+        ws['B2'] = { v: 'Nombre Asignatura',             t: 's' };
+        ws['C2'] = { v: 'Tipo Bibliografía',             t: 's' };
+        ws['D2'] = { v: 'Referencias',                   t: 's' };
+        ws['E2'] = { v: 'Disponibilidad en Bibliotecas', t: 's' };
+        ws['J2'] = { v: 'Observaciones',                 t: 's' };
+        ws['K2'] = { v: 'Proveedor',                     t: 's' };
+        ws['L2'] = { v: 'Valor pesos',                   t: 's' };
 
         // --- FILA 3: Sub-encabezados disponibilidad ---
-        ws['E3'] = { v: 'LIBROS N° de ejemplares (cantidad - año)', t: 's', s: { font: { bold: true, italic: true } } };
-        ws['I3'] = { v: 'Artículo Científico Disponible en (papel - on line)', t: 's', s: { font: { bold: true, italic: true } } };
+        ws['E3'] = { v: 'LIBROS N° de ejemplares (cantidad - año)',              t: 's' };
+        ws['I3'] = { v: 'Artículo Científico Disponible en (papel - on line)',   t: 's' };
 
-        // --- FILA 4: Sub-encabezados columnas E-H ---
-        ws['E4'] = { v: 'Btca UA',           t: 's', s: { font: { bold: true } } };
-        ws['F4'] = { v: 'Otras Btcas',       t: 's', s: { font: { bold: true } } };
-        ws['G4'] = { v: 'Total',             t: 's', s: { font: { bold: true } } };
-        ws['H4'] = { v: 'Disponible on line URL', t: 's', s: { font: { bold: true } } };
+        // --- FILA 4: Sub-columnas E-H ---
+        ws['E4'] = { v: 'Btca UA',                t: 's' };
+        ws['F4'] = { v: 'Otras Btcas',            t: 's' };
+        ws['G4'] = { v: 'Total',                  t: 's' };
+        ws['H4'] = { v: 'Disponible on line URL', t: 's' };
 
         // --- DATOS desde fila 5 ---
         let fila = 5;
 
-        // Agrupar por asignatura para insertar separadores obligatoria/complementaria
-        const porAsignatura = {};
+        // Agrupar por asignatura
+        const grupos = {};
         gestor_refs.forEach(r => {
-            const key = (r.Clave || '') + '|' + (r.Asignatura || '');
-            if (!porAsignatura[key]) porAsignatura[key] = { clave: r.Clave, asignatura: r.Asignatura, obligatoria: [], complementaria: [] };
+            const key = (r.Clave || '') + '||' + (r.Asignatura || '');
+            if (!grupos[key]) grupos[key] = {
+                clave:          r.Clave      || '',
+                asignatura:     r.Asignatura || '',
+                obligatoria:    [],
+                complementaria: []
+            };
             if ((r.Tipo || '').toLowerCase().includes('comp')) {
-                porAsignatura[key].complementaria.push(r);
+                grupos[key].complementaria.push(r);
             } else {
-                porAsignatura[key].obligatoria.push(r);
+                grupos[key].obligatoria.push(r);
             }
         });
 
-        Object.values(porAsignatura).forEach(grupo => {
-            // Obligatorias
+        Object.values(grupos).forEach(grupo => {
+            // Bloque OBLIGATORIA / BÁSICA
             if (grupo.obligatoria.length) {
-                ws[`C${fila}`] = { v: 'obligatoria', t: 's', s: { font: { italic: true }, fill: { fgColor: { rgb: 'EAF2FB' } } } };
+                ws[`C${fila}`] = { v: 'obligatoria', t: 's' };
                 fila++;
                 grupo.obligatoria.forEach(r => {
                     const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
-                    ws[`A${fila}`] = { v: grupo.clave      || '', t: 's' };
-                    ws[`B${fila}`] = { v: grupo.asignatura || '', t: 's' };
-                    ws[`C${fila}`] = { v: 'Básica',               t: 's' };
-                    ws[`D${fila}`] = { v: refLimpia,              t: 's' };
-                    ws[`E${fila}`] = { v: '', t: 's' };
-                    ws[`F${fila}`] = { v: '', t: 's' };
-                    ws[`G${fila}`] = { v: '', t: 's' };
-                    ws[`H${fila}`] = { v: r.ISBN || '', t: 's' };
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };  // vacío — ya dice "obligatoria" arriba
+                    ws[`D${fila}`] = { v: refLimpia,        t: 's' };
+                    ws[`E${fila}`] = { v: '',               t: 's' };
+                    ws[`F${fila}`] = { v: '',               t: 's' };
+                    ws[`G${fila}`] = { v: '',               t: 's' };
+                    ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
                     fila++;
                 });
-                fila++; // línea en blanco
+                fila++; // fila en blanco entre bloques
             }
 
-            // Complementarias
+            // Bloque COMPLEMENTARIA
             if (grupo.complementaria.length) {
-                ws[`C${fila}`] = { v: 'complementaria', t: 's', s: { font: { italic: true }, fill: { fgColor: { rgb: 'EAF2FB' } } } };
+                ws[`C${fila}`] = { v: 'complementaria', t: 's' };
                 fila++;
                 grupo.complementaria.forEach(r => {
                     const refLimpia = r.Referencia.replace(/<[^>]*>?/gm, '').replace(/\s*\.+\s*\.+/g, '.');
-                    ws[`A${fila}`] = { v: grupo.clave      || '', t: 's' };
-                    ws[`B${fila}`] = { v: grupo.asignatura || '', t: 's' };
-                    ws[`C${fila}`] = { v: 'Complementaria',       t: 's' };
-                    ws[`D${fila}`] = { v: refLimpia,              t: 's' };
-                    ws[`E${fila}`] = { v: '', t: 's' };
-                    ws[`F${fila}`] = { v: '', t: 's' };
-                    ws[`G${fila}`] = { v: '', t: 's' };
-                    ws[`H${fila}`] = { v: r.ISBN || '', t: 's' };
+                    ws[`A${fila}`] = { v: grupo.clave,      t: 's' };
+                    ws[`B${fila}`] = { v: grupo.asignatura, t: 's' };
+                    ws[`C${fila}`] = { v: '',               t: 's' };
+                    ws[`D${fila}`] = { v: refLimpia,        t: 's' };
+                    ws[`E${fila}`] = { v: '',               t: 's' };
+                    ws[`F${fila}`] = { v: '',               t: 's' };
+                    ws[`G${fila}`] = { v: '',               t: 's' };
+                    ws[`H${fila}`] = { v: r.ISBN || '',     t: 's' };
                     fila++;
                 });
                 fila++;
@@ -823,11 +827,11 @@
             { wch: 14 }, // L Valor
         ];
 
-        // Fusiones de celdas para encabezados
+        // Fusiones de celdas
         ws['!merges'] = [
-            { s:{r:0,c:0}, e:{r:0,c:11} },  // Fila 1: Carrera (A1:L1)
-            { s:{r:1,c:4}, e:{r:1,c:8} },   // Fila 2: Disponibilidad (E2:I2)
-            { s:{r:2,c:4}, e:{r:2,c:7} },   // Fila 3: LIBROS (E3:H3)
+            { s:{r:0,c:0}, e:{r:0,c:11} }, // A1:L1 Carrera
+            { s:{r:1,c:4}, e:{r:1,c:8} },  // E2:I2 Disponibilidad
+            { s:{r:2,c:4}, e:{r:2,c:7} },  // E3:H3 LIBROS
         ];
 
         ws['!ref'] = `A1:L${fila}`;
