@@ -168,6 +168,12 @@
                 </div>
             </div>
 
+            <!-- Resumen por asignatura -->
+            <div id="ext_resumenAsignaturas" style="display:none;" class="mb-3">
+                <h6 class="text-muted mb-2">Asignaturas cargadas</h6>
+                <div id="ext_resumenLista" class="d-flex flex-wrap gap-2"></div>
+            </div>
+
             <div class="table-responsive mt-3" style="max-height: 500px; overflow-y: auto;">
                 <table class="table table-hover table-bordered small">
                     <thead class="table-light sticky-top">
@@ -856,15 +862,84 @@
         const tbody = document.getElementById('tablaExtractorBody');
         if(ext_datos.length) tbody.innerHTML = '';
         else tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Esperando datos...</td></tr>';
-        ext_datos.slice(-50).forEach(d => {
-            let clase = d.status.level === 'success' ? 'row-ok' : (d.status.level === 'warning' ? 'row-warning' : 'row-error');
-            tbody.innerHTML += `<tr class="${clase}"><td><small>${d.archivo}</small></td><td>${d.nombre}</td><td><span class="badge bg-secondary">${d.tipo}</span></td><td><small>${d.ref}</small></td><td><small>${d.status.msg}</small></td></tr>`;
+
+        // Mostrar agrupado por asignatura en la tabla
+        const grupos = {};
+        ext_datos.forEach((d, i) => {
+            const key = (d.clave || '—') + '||' + (d.nombre || '—');
+            if (!grupos[key]) grupos[key] = { clave: d.clave, nombre: d.nombre, items: [] };
+            grupos[key].items.push({ ...d, idx: i });
         });
+
+        Object.values(grupos).forEach(grupo => {
+            // Fila separadora de asignatura
+            tbody.innerHTML += `
+                <tr style="background:#e9ecef;">
+                    <td colspan="4">
+                        <strong>${grupo.clave || '—'}</strong> · ${grupo.nombre || '—'}
+                        <span class="badge bg-secondary ms-2">${grupo.items.length} refs</span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-1" style="font-size:.75rem;"
+                            onclick="ext_editarAsignatura('${(grupo.clave+'||'+grupo.nombre).replace(/'/g,"\\'")}')">
+                            ✏️ Editar
+                        </button>
+                    </td>
+                </tr>`;
+            // Filas de referencias del grupo
+            grupo.items.forEach(d => {
+                let clase = d.status.level === 'success' ? 'row-ok' : (d.status.level === 'warning' ? 'row-warning' : 'row-error');
+                tbody.innerHTML += `<tr class="${clase}">
+                    <td><small class="text-muted">${d.archivo}</small></td>
+                    <td><small>${d.nombre}</small></td>
+                    <td><span class="badge bg-secondary">${d.tipo}</span></td>
+                    <td><small>${d.ref}</small></td>
+                    <td><small>${d.status.msg}</small></td>
+                </tr>`;
+            });
+        });
+
+        // Resumen tarjetas por asignatura
+        const resumenLista = document.getElementById('ext_resumenLista');
+        resumenLista.innerHTML = '';
+        Object.values(grupos).forEach(grupo => {
+            const bas  = grupo.items.filter(d => d.tipo !== 'Complementaria').length;
+            const comp = grupo.items.filter(d => d.tipo === 'Complementaria').length;
+            resumenLista.innerHTML += `
+                <div class="card border-secondary" style="min-width:200px; max-width:260px;">
+                    <div class="card-body py-2 px-3">
+                        <div class="fw-bold small">${grupo.clave || '—'}</div>
+                        <div class="text-muted small text-truncate" title="${grupo.nombre}">${grupo.nombre || '—'}</div>
+                        <div class="mt-1 d-flex gap-2">
+                            <span class="badge bg-primary">${bas} Básica</span>
+                            <span class="badge bg-secondary">${comp} Compl.</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        document.getElementById('ext_resumenAsignaturas').style.display = ext_datos.length ? 'block' : 'none';
+
         document.getElementById('badgeArchivos').innerText = ext_filesProcesados.size + " Archivos";
         document.getElementById('badgeRefs').innerText = ext_datos.length + " Refs";
         document.getElementById('btnDescargarExt').classList.remove('disabled');
         document.getElementById('btnEnviarGestor').classList.remove('disabled');
-        document.getElementById('statusLog').innerText = "Procesamiento completo.";
+        document.getElementById('statusLog').innerText = "Procesamiento completo. " + Object.keys(grupos).length + " asignatura(s) detectada(s).";
+    }
+
+    function ext_editarAsignatura(key) {
+        const [claveActual, nombreActual] = key.split('||');
+        const nuevaClave  = prompt('Clave de asignatura:', claveActual === '—' ? '' : claveActual);
+        if (nuevaClave === null) return;
+        const nuevoNombre = prompt('Nombre de asignatura:', nombreActual === '—' ? '' : nombreActual);
+        if (nuevoNombre === null) return;
+        // Actualizar todos los registros de ese grupo
+        ext_datos.forEach(d => {
+            if ((d.clave || '—') === claveActual && (d.nombre || '—') === nombreActual) {
+                d.clave  = nuevaClave.trim();
+                d.nombre = nuevoNombre.trim();
+            }
+        });
+        ext_updateView();
     }
 
     function ext_reiniciarTodo() {
