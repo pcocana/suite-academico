@@ -229,16 +229,20 @@
 
                 <!-- Acciones -->
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">Referencias generadas <span class="badge bg-secondary" id="imp_badge">0</span></h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="mb-0">Referencias <span class="badge bg-secondary" id="imp_badge">0</span></h6>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="imp_seleccionarTodas()" style="font-size:.8rem;">☑ Todas</button>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="imp_deseleccionarTodas()" style="font-size:.8rem;">☐ Ninguna</button>
+                    </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-outline-primary btn-sm" onclick="imp_copiarTodas()">📋 Copiar todas</button>
-                        <button class="btn btn-primary btn-sm" onclick="imp_enviarAlGestor()">➡️ Enviar al Gestor</button>
+                        <button class="btn btn-primary btn-sm" onclick="imp_enviarAlGestor()">➡️ Enviar seleccionadas</button>
                     </div>
                 </div>
 
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover table-sm">
-                        <thead class="table-light"><tr><th>Referencia APA 7</th><th width="140">Tipo</th><th width="60" class="text-center">Copiar</th></tr></thead>
+                        <thead class="table-light"><tr><th width="40" class="text-center">✓</th><th>Referencia APA 7</th><th width="140">Tipo</th><th width="60" class="text-center">Copiar</th></tr></thead>
                         <tbody id="tablaImportadorBody"></tbody>
                     </table>
                 </div>
@@ -1152,6 +1156,9 @@
                 const citaClean = cita.replace(/<i>|<\/i>/g, '');
                 tbody.innerHTML += `
                     <tr>
+                        <td class="text-center">
+                            <input type="checkbox" id="imp_chk_${idx}" checked style="width:16px;height:16px;cursor:pointer;">
+                        </td>
                         <td><small>${cita}</small></td>
                         <td>
                             <select class="form-select form-select-sm" id="imp_tipo_${idx}" style="min-width:130px;">
@@ -1165,6 +1172,20 @@
                     </tr>`;
             });
         }
+    }
+
+    function imp_seleccionarTodas() {
+        imp_referencias.forEach((_, idx) => {
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (chk) chk.checked = true;
+        });
+    }
+
+    function imp_deseleccionarTodas() {
+        imp_referencias.forEach((_, idx) => {
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (chk) chk.checked = false;
+        });
     }
 
     function imp_aplicarTipoGlobal(tipo) {
@@ -1187,20 +1208,27 @@
         const carrera    = document.getElementById('imp_carrera').value.trim();
         const clave      = document.getElementById('imp_clave').value.trim();
         const asignatura = document.getElementById('imp_asignatura').value.trim();
+
+        // Solo las que tienen checkbox marcado
         let agregados = 0;
+        let seleccionadas = 0;
         imp_referencias.forEach((ref, idx) => {
-            const cita = imp_generarAPA(ref);
-            // Leer tipo individual de cada fila
+            const chk = document.getElementById(`imp_chk_${idx}`);
+            if (!chk || !chk.checked) return;
+            seleccionadas++;
+            const cita   = imp_generarAPA(ref);
             const tipoEl = document.getElementById(`imp_tipo_${idx}`);
-            const tipo   = tipoEl ? tipoEl.value : document.getElementById('imp_tipo').value;
+            const tipo   = tipoEl ? tipoEl.value : 'Básica';
             const existe = gestor_refs.some(r => r.Referencia === cita);
             if (!existe) {
                 gestor_refs.push({ Carrera: carrera, Clave: clave, Asignatura: asignatura, Tipo: tipo, Referencia: cita, ISBN: '' });
                 agregados++;
             }
         });
+
+        if (!seleccionadas) return alert('No hay referencias seleccionadas. Marca al menos una.');
         gestor_renderTabla();
-        alert(`✅ ${agregados} referencia(s) enviadas al Gestor.${agregados < imp_referencias.length ? `\n(${imp_referencias.length - agregados} ya existían)` : ''}`);
+        alert(`✅ ${agregados} referencia(s) enviadas al Gestor.\n\nAhora cambia la asignatura y selecciona el siguiente grupo.`);
         document.getElementById('gestor-tab').click();
     }
 </script>
