@@ -1291,12 +1291,20 @@ function disp_cargarDesdeGestor() {
 
 function disp_buscarEnCatalogo(idx) {
     const item = disp_items[idx];
+    // Normalizar texto para búsqueda en KOHA — quitar tildes y caracteres especiales
+    function disp_normalizarQuery(texto) {
+        return texto
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar tildes
+            .replace(/[''´`]/g, ' ')   // apóstrofes y acentos sueltos
+            .replace(/[^a-zA-Z0-9\s]/g, ' ') // otros especiales
+            .replace(/\s+/g, ' ').trim();
+    }
+
     // Construir query combinando título + autor para mejores resultados
-    let query = item.titulo;
+    let query = disp_normalizarQuery(item.titulo);
     if (item.autor) {
-        // Usar solo el primer apellido del autor para no ser demasiado restrictivo
-        const primerApellido = item.autor.split(',')[0].trim();
-        query = `${item.titulo} ${primerApellido}`;
+        const primerApellido = disp_normalizarQuery(item.autor.split(',')[0].trim());
+        query = `${query} ${primerApellido}`;
     }
     const url = OPAC_BASE + encodeURIComponent(query);
     window.open(url, '_blank');
@@ -1366,7 +1374,7 @@ function disp_exportarExcel() {
         'Autor':           i.autor  || '',
         'Año':             i.anio   || '',
         'Disponibilidad':  estadoTexto[i.estado],
-        'URL Catálogo':    OPAC_BASE + encodeURIComponent(i.titulo + (i.autor ? ' ' + i.autor.split(',')[0] : ''))
+        'URL Catálogo':    OPAC_BASE + encodeURIComponent(disp_normalizarQuery(i.titulo + (i.autor ? ' ' + i.autor.split(',')[0] : '')))
     }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datos), 'Disponibilidad PUCV');
