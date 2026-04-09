@@ -1308,7 +1308,7 @@ function disp_buscarEnCatalogo(idx) {
             .split(' ')
             .filter(p => p.length > 3 && !stopwords.has(p.toLowerCase()))
             .slice(0, 2);
-        return [apellido, ...palabras].filter(Boolean).join(' AND ');
+        return [apellido, ...palabras].filter(Boolean).join(' & ');
     }
 
     // Buscar con formato AND
