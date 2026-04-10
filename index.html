@@ -356,18 +356,72 @@
 </div>
 
 <div class="modal fade" id="manualModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">📖 Manual de Uso</h5>
+                <h5 class="modal-title">📖 Manual de Uso — Bibliografía Académica</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body modal-manual-body">
-                <h4 class="text-success mb-3">Tips Extractor</h4>
-                <p>El sistema intenta leer el nombre de la asignatura dentro del PDF. Si el PDF tiene un formato muy extraño y el sistema lee demasiado texto, automáticamente usará el <strong>Nombre del Archivo</strong> como nombre de la asignatura.</p>
-                <hr>
-                <h4 style="color: #6610f2;" class="mb-3">Tips Importador</h4>
-                <p>Puede exportar sus referencias de Zotero a Word o PDF desde aquí mismo para luego cargarlas en la pestaña "Extractor" y procesarlas junto con sus programas de estudio.</p>
+
+                <!-- GESTOR -->
+                <div class="manual-step-box">
+                    <h5 class="text-primary mb-2">🛠️ Gestor & Creador APA 7</h5>
+                    <p>Permite crear referencias bibliográficas en formato APA 7 de forma manual o automática, y exportarlas en la planilla oficial institucional.</p>
+                    <p><span class="step-number">1.</span><strong>Datos de contexto:</strong> Ingresa la Carrera, Clave y Asignatura antes de agregar referencias. Estos datos se asocian a cada referencia y aparecerán en la planilla Excel.</p>
+                    <p><span class="step-number">2.</span><strong>Autocompletado por ISBN o DOI:</strong> Pega el ISBN o DOI del libro o artículo y haz clic en <em>Buscar y Rellenar</em>. El sistema consulta Google Books y OpenLibrary y rellena los campos automáticamente. Si el autor no se encuentra, se mostrará una advertencia para ingresarlo manualmente.</p>
+                    <p><span class="step-number">3.</span><strong>Ingreso manual:</strong> Selecciona el tipo de recurso (Libro, Capítulo, Artículo, Tesis, Informe, Conferencia, Web, YouTube, IA) y completa los campos que aparecen. Haz clic en <em>+ Agregar a la Lista</em>.</p>
+                    <p><span class="step-number">4.</span><strong>Exportar planilla:</strong> Una vez cargadas todas las referencias, haz clic en <em>Descargar Excel</em>. La planilla saldrá en el formato oficial institucional, agrupada por asignatura con separadores de bibliografía básica y complementaria.</p>
+                    <p class="text-muted small mb-0">💡 Puedes cargar referencias de múltiples asignaturas en el mismo Gestor. Al exportar, cada asignatura quedará agrupada por separado en la planilla.</p>
+                </div>
+
+                <!-- EXTRACTOR -->
+                <div class="manual-step-box">
+                    <h5 class="text-success mb-2">📂 Extractor Masivo</h5>
+                    <p>Carga programas de asignatura en PDF o Word y extrae automáticamente las referencias bibliográficas, detectando si son básicas o complementarias.</p>
+                    <p><span class="step-number">1.</span><strong>Cargar archivos:</strong> Arrastra uno o varios archivos PDF o Word (.docx) a la zona de carga. Puedes cargar múltiples asignaturas de una vez.</p>
+                    <p><span class="step-number">2.</span><strong>Detección automática:</strong> El sistema identifica la sección de bibliografía, detecta la asignatura y la clave, y clasifica las referencias como <em>Básica</em> o <em>Complementaria</em>. También reconoce variantes como <em>Obligatoria</em> o <em>Recomendada</em>.</p>
+                    <p><span class="step-number">3.</span><strong>Editar si es necesario:</strong> Si el sistema no detectó correctamente la clave o nombre de una asignatura, usa el botón <em>✏️ Editar</em> en el separador gris para corregirlo antes de exportar.</p>
+                    <p><span class="step-number">4.</span><strong>Enviar al Gestor o descargar:</strong> Usa <em>➡️ Enviar al Gestor</em> para combinar con otras referencias y exportar la planilla oficial, o usa <em>📥 Descargar Excel Unificado</em> para exportar directamente en formato oficial.</p>
+                    <p class="text-muted small mb-0">⚠️ La calidad de extracción depende del formato del documento. PDFs escaneados (imágenes) no son procesables. Si el documento tiene un formato muy irregular, usa el Gestor para ingresar las referencias manualmente.</p>
+                </div>
+
+                <!-- IMPORTADOR -->
+                <div class="manual-step-box">
+                    <h5 mb-2 style="color:#6610f2;">📚 Importador Zotero / Mendeley</h5>
+                    <p>Importa referencias exportadas desde Zotero o Mendeley en formato .RIS o .BibTeX y las convierte a APA 7.</p>
+                    <p><span class="step-number">1.</span><strong>Exportar desde Zotero/Mendeley:</strong> En tu gestor bibliográfico, selecciona las referencias y expórtalas en formato RIS (.ris) o BibTeX (.bib).</p>
+                    <p><span class="step-number">2.</span><strong>Cargar el archivo:</strong> Arrastra el archivo .ris o .bib a la zona de carga.</p>
+                    <p><span class="step-number">3.</span><strong>Asignar a una asignatura:</strong> Completa los campos Carrera, Clave y Asignatura. Luego marca con el checkbox las referencias que pertenecen a esa asignatura y asigna el tipo (Básica o Complementaria) a cada una.</p>
+                    <p><span class="step-number">4.</span><strong>Enviar por grupos:</strong> Haz clic en <em>➡️ Enviar seleccionadas</em>. Luego cambia la Clave y Asignatura, selecciona el siguiente grupo y repite. Usa los botones <em>☑ Todas</em> y <em>☐ Ninguna</em> para agilizar la selección.</p>
+                    <p><span class="step-number">5.</span><strong>Exportar:</strong> Ve al Gestor Principal donde aparecerán todas las referencias enviadas y descarga la planilla oficial.</p>
+                    <p class="text-muted small mb-0">💡 El botón <em>↓ Todas</em> junto al selector de tipo aplica el mismo tipo a todas las filas de golpe.</p>
+                </div>
+
+                <!-- DISPONIBILIDAD -->
+                <div class="manual-step-box">
+                    <h5 style="color:#0d6efd;" class="mb-2">🔍 Disponibilidad PUCV</h5>
+                    <p>Verifica si los libros de una bibliografía están disponibles en el catálogo de la Biblioteca PUCV.</p>
+                    <p><span class="step-number">1.</span><strong>Cargar referencias:</strong> Haz clic en <em>📥 Importar desde Gestor</em> para traer automáticamente los libros del Gestor Principal, o agrega títulos manualmente.</p>
+                    <p><span class="step-number">2.</span><strong>Buscar en catálogo:</strong> Para cada libro haz clic en <em>🔍 Buscar</em>. Se abrirá el catálogo PUCV con la búsqueda lista en una nueva pestaña. El sistema normaliza automáticamente títulos con caracteres especiales, tildes e idiomas extranjeros para mejorar los resultados.</p>
+                    <p><span class="step-number">3.</span><strong>Marcar disponibilidad:</strong> Revisa el resultado en el catálogo y vuelve a la aplicación para marcar el estado: ✅ Disponible / 🟡 Prestado o Revisar / 🔴 No está en catálogo.</p>
+                    <p><span class="step-number">4.</span><strong>Descargar informe:</strong> El botón <em>📥 Descargar informe Excel</em> genera un informe con el estado de cada libro y un enlace directo al catálogo PUCV para cada uno.</p>
+                    <p class="text-muted small mb-0">💡 El semáforo de resumen muestra el panorama general de disponibilidad de la bibliografía completa.</p>
+                </div>
+
+                <!-- FLUJO RECOMENDADO -->
+                <div class="manual-step-box" style="border-left-color: #198754;">
+                    <h5 class="text-success mb-2">✅ Flujo de trabajo recomendado</h5>
+                    <p class="mb-1"><strong>Opción A — Desde un programa de asignatura (PDF/Word):</strong></p>
+                    <p class="text-muted small">Extractor Masivo → Enviar al Gestor → Descargar planilla Excel oficial</p>
+                    <p class="mb-1"><strong>Opción B — Ingreso manual o por ISBN:</strong></p>
+                    <p class="text-muted small">Gestor (ingresar referencias) → Descargar planilla Excel oficial</p>
+                    <p class="mb-1"><strong>Opción C — Desde Zotero o Mendeley:</strong></p>
+                    <p class="text-muted small">Importador (cargar .RIS/.BIB → seleccionar grupos → enviar) → Gestor → Descargar planilla</p>
+                    <p class="mb-1"><strong>Opción D — Verificar disponibilidad:</strong></p>
+                    <p class="text-muted small">Cualquiera de las opciones anteriores → Panel Disponibilidad PUCV → Descargar informe</p>
+                </div>
+
             </div>
         </div>
     </div>
