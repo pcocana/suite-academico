@@ -3,56 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bibliografía Académica</title>
+    <title>Bibliografía Académica · PUCV</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
-        body { background-color: #f0f2f5; font-family: 'Segoe UI', system-ui, sans-serif; }
-        .main-container { max-width: 1250px; margin: 30px auto; background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); overflow: hidden; position: relative; }
-        
-        /* Encabezado */
-        .app-header { background: #2c3e50; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-        .app-title { margin: 0; font-size: 1.5rem; font-weight: 600; }
+        /* ── Variables ─────────────────────────────────────────────────────── */
+        :root {
+            --navy:    #1e3355;
+            --navy-md: #2a4a7a;
+            --gold:    #b8952a;
+            --gold-lt: #f0e6c8;
+            --gold-bd: #d4b96a;
+            --cream:   #faf7f2;
+            --paper:   #ffffff;
+            --border:  #ddd5c5;
+            --text:    #2d2a24;
+            --muted:   #7a7060;
+            --green:   #1a6b3a;
+            --green-lt:#d6ede1;
+            --r: 8px;
+        }
 
-        /* Pestañas */
-        .nav-tabs { background-color: #343a40; border-bottom: none; padding: 10px 10px 0 10px; margin-top: -1px; }
-        .nav-link { color: #d1d1d1; border: none; border-radius: 10px 10px 0 0; margin-right: 5px; padding: 12px 25px; font-weight: 600; }
-        .nav-link:hover { color: white; background-color: #495057; }
-        .nav-link.active { background-color: white; color: #0d6efd; border-bottom: 3px solid white; }
-        .tab-content { padding: 30px; }
-        
-        /* Estilos Gestor */
-        .req-star { color: red; font-weight: bold; }
-        .auto-fill-box { background-color: #e8f0fe; border: 1px solid #b3d7ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .btn-magic { background-color: #6f42c1; color: white; }
-        .btn-magic:hover { background-color: #5a32a3; color: white; }
+        /* ── Base ───────────────────────────────────────────────────────────── */
+        body {
+            background: var(--cream);
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            color: var(--text);
+            font-size: 14px;
+        }
 
-        /* Estilos Extractor e Importador */
-        .drop-zone { border: 2px dashed #0d6efd; background-color: #f8fbff; border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; transition: 0.3s; }
-        .drop-zone:hover { background-color: #e6f0ff; border-color: #0b5ed7; }
-        .drop-zone-import { border: 2px dashed #6610f2; background-color: #f3f0ff; }
-        .drop-zone-import:hover { background-color: #e0d8ff; border-color: #520dc2; }
+        /* ── Contenedor principal ───────────────────────────────────────────── */
+        .main-container {
+            max-width: 1260px;
+            margin: 28px auto 40px;
+            background: var(--paper);
+            border-radius: 14px;
+            box-shadow: 0 4px 32px rgba(30,51,85,.10), 0 1px 4px rgba(0,0,0,.04);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
 
-        .row-ok { background-color: #d1e7dd !important; } 
-        .row-warning { background-color: #fff3cd !important; } 
-        .row-error { background-color: #f8d7da !important; } 
-        
-        /* Modal Manual */
-        .modal-manual-body { max-height: 75vh; overflow-y: auto; text-align: left; padding: 30px; background: #fff; line-height: 1.6; }
-        .manual-step-box { background: #f8f9fa; border-left: 4px solid #0d6efd; padding: 15px; margin-bottom: 15px; }
-        .step-number { font-weight: bold; color: #0d6efd; font-size: 1.1em; margin-right: 5px; }
+        /* ── Encabezado ─────────────────────────────────────────────────────── */
+        .app-header {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-md) 100%);
+            color: white;
+            padding: 18px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--gold);
+        }
+        .app-header-left { display: flex; align-items: center; gap: 16px; }
+        .app-header-logo {
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,.12);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+        }
+        .app-title {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -.02em;
+        }
+        .app-subtitle {
+            font-size: 11px;
+            color: rgba(255,255,255,.55);
+            margin: 2px 0 0;
+            font-weight: 400;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .app-header .btn-outline-light {
+            border-color: rgba(255,255,255,.35);
+            color: rgba(255,255,255,.85);
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-family: 'Lato', sans-serif;
+        }
+        .app-header .btn-outline-light:hover {
+            background: rgba(255,255,255,.15);
+            color: white;
+        }
+
+        /* ── Pestañas ───────────────────────────────────────────────────────── */
+        .nav-tabs {
+            background: var(--navy);
+            border-bottom: none;
+            padding: 0 20px;
+            gap: 2px;
+        }
+        .nav-link {
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            color: rgba(255,255,255,.55);
+            border: none !important;
+            border-radius: 0;
+            padding: 13px 22px 11px;
+            letter-spacing: .02em;
+            border-bottom: 3px solid transparent !important;
+            margin-bottom: 0;
+            transition: color .2s, border-color .2s;
+        }
+        .nav-link:hover { color: rgba(255,255,255,.85); }
+        .nav-link.active {
+            background: transparent !important;
+            color: var(--gold-bd) !important;
+            border-bottom-color: var(--gold-bd) !important;
+        }
+        .tab-content { padding: 32px 36px; background: var(--paper); }
+
+        /* ── Sección headings ───────────────────────────────────────────────── */
+        .tab-pane h3 {
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: -.02em;
+            margin-bottom: 20px;
+        }
+        .card h5 { font-family: 'DM Sans', sans-serif; font-size: .95rem; color: var(--navy); font-weight: 600; }
+
+        /* ── Autocompletado ─────────────────────────────────────────────────── */
+        .auto-fill-box {
+            background: linear-gradient(to right, #eef4ff, #f5f0ff);
+            border: 1px solid #c8d8f8;
+            padding: 16px 18px;
+            border-radius: var(--r);
+            margin-bottom: 20px;
+        }
+        .auto-fill-box .form-label { color: var(--navy); font-weight: 700; font-size: 13px; }
+
+        /* ── Botones ────────────────────────────────────────────────────────── */
+        .btn-magic {
+            background: linear-gradient(135deg, #5e35b1, #7c4dff);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-magic:hover { background: linear-gradient(135deg, #4a27a0, #6a3de8); color: white; }
+
+        .btn-primary {
+            background: var(--navy);
+            border-color: var(--navy);
+            font-weight: 600;
+        }
+        .btn-primary:hover { background: var(--navy-md); border-color: var(--navy-md); }
+
+        .btn-success {
+            background: var(--green);
+            border-color: var(--green);
+            font-weight: 600;
+        }
+
+        /* ── Formularios ────────────────────────────────────────────────────── */
+        .form-control, .form-select {
+            border-color: var(--border);
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            background: var(--paper);
+            color: var(--text);
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--navy-md);
+            box-shadow: 0 0 0 3px rgba(42,74,122,.12);
+        }
+        .form-label { font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; margin-bottom: 4px; }
+
+        /* ── Drop zones ─────────────────────────────────────────────────────── */
+        .drop-zone {
+            border: 2px dashed var(--gold-bd);
+            background: var(--gold-lt);
+            border-radius: 12px;
+            padding: 42px;
+            text-align: center;
+            cursor: pointer;
+            transition: .25s;
+        }
+        .drop-zone:hover { background: #ede3c5; border-color: var(--gold); }
+        .drop-zone h4 { font-family: 'DM Sans', sans-serif; color: var(--navy); font-size: 1.1rem; font-weight: 600; }
+
+        .drop-zone-import {
+            border-color: #9c78d4;
+            background: #f4f0fc;
+        }
+        .drop-zone-import:hover { background: #ebe3fa; border-color: #7c4dff; }
+        .drop-zone-import h4 { color: #5e35b1; }
+
+        /* ── Tablas ─────────────────────────────────────────────────────────── */
+        .table {
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+        }
+        .table thead th {
+            font-family: 'Inter', sans-serif;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+        .table-dark thead {
+            background: var(--navy) !important;
+        }
+        .table-bordered { border-color: var(--border) !important; }
+        .table-bordered td, .table-bordered th { border-color: var(--border) !important; }
+        .table-hover tbody tr:hover { background: rgba(184,149,42,.06) !important; }
+        .table-light { background: var(--cream) !important; }
+        .table-striped tbody tr:nth-of-type(odd) { background: rgba(250,247,242,.7); }
+
+        /* ── Row states ─────────────────────────────────────────────────────── */
+        .row-ok      { background-color: #d6ede1 !important; }
+        .row-warning { background-color: #fdf4d6 !important; }
+        .row-error   { background-color: #fad8da !important; }
+
+        /* ── Badges ─────────────────────────────────────────────────────────── */
+        .badge.bg-primary { background: var(--navy) !important; }
+        .badge.bg-secondary { background: var(--muted) !important; }
+        .badge.bg-success { background: var(--green) !important; }
+
+        /* ── Requerido ──────────────────────────────────────────────────────── */
+        .req-star { color: #c0392b; font-weight: bold; }
+
+        /* ── Resumen disponibilidad ─────────────────────────────────────────── */
+        #disp_resumen .fw-bold.fs-4 { font-family: 'DM Sans', sans-serif; font-size: 2rem !important; font-weight: 700; }
+
+        /* ── Modal ──────────────────────────────────────────────────────────── */
+        .modal-header.bg-dark { background: var(--navy) !important; }
+        .modal-manual-body {
+            max-height: 75vh; overflow-y: auto;
+            text-align: left; padding: 28px 32px;
+            background: var(--paper); line-height: 1.7;
+            font-family: 'Inter', sans-serif;
+        }
+        .manual-step-box {
+            background: var(--cream);
+            border-left: 4px solid var(--navy);
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            border-radius: 0 var(--r) var(--r) 0;
+        }
+        .manual-step-box h5 { font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; }
+        .step-number { font-weight: 700; color: var(--navy); font-size: 1.05em; margin-right: 4px; }
+
+        /* ── Alert info ─────────────────────────────────────────────────────── */
+        .alert-info {
+            background: #eef4ff !important;
+            border-color: #c2d4f5 !important;
+            color: var(--navy) !important;
+        }
+
+        /* ── Sticky thead ───────────────────────────────────────────────────── */
+        .sticky-top { top: 0; z-index: 2; }
+
+        /* ── Scrollbar suave ────────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--cream); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-bd); }
     </style>
 </head>
 <body>
 
 <div class="main-container">
     <div class="app-header">
-        <h1 class="app-title">Bibliografía Académica</h1>
+        <div class="app-header-left">
+            <div class="app-header-logo">📚</div>
+            <div>
+                <h1 class="app-title">Bibliografía Académica</h1>
+                <div class="app-subtitle">Pontificia Universidad Católica de Valparaíso</div>
+            </div>
+        </div>
         <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#manualModal">
             📖 Manual de Uso
         </button>
