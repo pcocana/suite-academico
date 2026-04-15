@@ -8,7 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -385,7 +384,7 @@
 
             <div class="drop-zone" id="dropZone">
                 <h4>📂 Arrastra tus archivos aquí</h4>
-                <p class="text-muted">Soporta PDF, Word (.docx). <strong>Mejorado para detectar Nombres de Asignatura.</strong></p>
+                <p class="text-muted">Solo Word (.docx). <strong>Mejorado para detectar Nombres de Asignatura.</strong> Si tienes un PDF, conviértelo primero a .docx.</p>
                 <input type="file" id="fileInput" multiple style="display:none">
                 <button class="btn btn-outline-primary btn-sm mt-2" onclick="document.getElementById('fileInput').click()">O selecciona archivos</button>
             </div>
@@ -1000,8 +999,6 @@
 </script>
 
 <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-    
     let ext_datos = []; 
     let ext_filesProcesados = new Set();
     const dropZone = document.getElementById('dropZone');
@@ -1016,34 +1013,31 @@
         document.getElementById('statusLog').innerText = `Procesando ${files.length} archivos...`;
         Array.from(files).forEach(file => {
             if (ext_filesProcesados.has(file.name)) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            // Solo Word (.docx) — PDF bloqueado por seguridad de navegador en archivo local
+            if (ext === 'pdf') {
+                alert(`⚠️ "${file.name}"\n\nEl archivo PDF no puede procesarse porque el navegador bloquea los workers de PDF.js cuando se abre el programa como archivo local.\n\nSolución: convierte el PDF a Word (.docx) usando Word, Google Docs o cualquier convertidor online, y súbelo en formato .docx.`);
+                return;
+            }
+
+            if (ext !== 'docx') {
+                alert(`Formato no soportado: .${ext}\nSube el programa de asignatura en formato Word (.docx).`);
+                return;
+            }
+
             ext_filesProcesados.add(file.name);
             const reader = new FileReader();
-            const ext = file.name.split('.').pop().toLowerCase();
-            if (ext === 'pdf') {
-                reader.onload = async function() {
-                    try {
-                        const typedarray = new Uint8Array(this.result);
-                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                        let fullText = "";
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-                            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-                        }
-                        extraerYAcumular(fullText, file.name);
-                    } catch (e) { console.error(e); }
-                };
-                reader.readAsArrayBuffer(file);
-            } else if (ext === 'docx') {
-                reader.onload = async function() {
-                    try {
-                        // Usar párrafos individuales para respetar la estructura del documento
-                        const result = await mammoth.convertToHtml({ arrayBuffer: this.result });
-                        extraerYAcumularDocx(result.value, file.name);
-                    } catch (e) { console.error(e); }
-                };
-                reader.readAsArrayBuffer(file);
-            }
+            reader.onload = async function() {
+                try {
+                    const result = await mammoth.convertToHtml({ arrayBuffer: this.result });
+                    extraerYAcumularDocx(result.value, file.name);
+                } catch (e) {
+                    console.error(e);
+                    alert(`Error al leer "${file.name}": ${e.message}`);
+                }
+            };
+            reader.readAsArrayBuffer(file);
         });
     }
 
@@ -1078,20 +1072,29 @@
         let enBiblio = false;
         let tipoActual = 'Básica';
 
-        const esTituloBiblio = t => /^(?:Bibliografía|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)$/i.test(t);
-        const esTipoBasica   = t => /^(?:Básica|Obligatoria|Recomendada\s+Básica)$/i.test(t);
-        const esTipoComp     = t => /^(?:Complementaria|Adicional|Recomendada)$/i.test(t);
-        const esReferencia   = t => t.length > 30 && /\d{4}|s\.f\./.test(t) && /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,},\s+[A-ZÁÉÍÓÚÑÜ]/.test(t);
+        // FIX: detectar sección bibliografía incluso con número romano y texto extra
+        const esTituloBiblio = t => /(?:VII\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s+Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(t);
+        // FIX: detectar subencabezados "Bibliografía Obligatoria:" y "Bibliografía Complementaria:"
+        const esTipoBasica   = t => /(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp     = t => /(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        // FIX: limpiar viñetas (•, ●, *, -) antes de evaluar si es referencia
+        const limpiarLinea   = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+        const esReferencia   = t => {
+            const tc = limpiarLinea(t);
+            return tc.length > 30 && /\d{4}|s\.f\./.test(tc) && /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,}[,;]/.test(tc);
+        };
 
         parrafos.forEach(p => {
             if (esTituloBiblio(p)) { enBiblio = true; return; }
             if (!enBiblio) return;
+            // Detener si llegamos a otra sección principal (VIII, IX, etc.)
+            if (/^(?:VIII|IX|X)\.\s+/i.test(p) || /^SOBRE\s+INTEGRIDAD/i.test(p)) { enBiblio = false; return; }
 
             if (esTipoBasica(p))   { tipoActual = 'Básica';         return; }
             if (esTipoComp(p))     { tipoActual = 'Complementaria'; return; }
 
             if (esReferencia(p)) {
-                const refLimpia = p.replace(/\s*\.+\s*\.+/g, '.').trim();
+                const refLimpia = limpiarLinea(p).replace(/\s*\.+\s*\.+/g, '.').trim();
                 ext_datos.push({ archivo: filename, carrera, clave, nombre, tipo: tipoActual, ref: refLimpia, status: validarCalidad(refLimpia) });
             }
         });
@@ -1124,27 +1127,32 @@
         if (!nombre || nombre.length > 100)
             nombre = filename.replace(/\.(pdf|docx)$/i, '').replace(/[-_]/g, ' ').trim();
 
-        // Encontrar inicio de bibliografía
+        // Encontrar inicio de bibliografía — FIX: incluye "VII. BIBLIOGRAFÍA Y OTROS RECURSOS..."
         let idxBiblio = -1;
         for (let i = 0; i < lineas.length; i++) {
-            if (/^(?:Bibliografía|Referencias\s*Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)$/i.test(lineas[i])) {
+            if (/^(?:VII\.?\s*)?(?:BIBLIOGRAFÍA|Referencias\s*Bibliográficas?|Textos?\s+Guías?|Material\s+Bibliográfico)(?:\s+Y\s+.+)?$/i.test(lineas[i])) {
                 idxBiblio = i; break;
             }
         }
         if (idxBiblio === -1) {
             for (let i = 0; i < lineas.length; i++) {
-                if (/Bibliografía|Referencias\s+Bibliográficas?/i.test(lineas[i])) {
+                if (/BIBLIOGRAFÍA|Referencias\s+Bibliográficas?/i.test(lineas[i])) {
                     idxBiblio = i; break;
                 }
             }
         }
         if (idxBiblio === -1) return;
 
-        const esTipoBasica = t => /^(?:Básica|Obligatoria|Recomendada\s+Básica)$/i.test(t);
-        const esTipoComp   = t => /^(?:Complementaria|Adicional|Recomendada)$/i.test(t);
-        // Referencia APA real: debe empezar con Apellido, Inicial. o Apellido, Nombre
-        // NO cortar por palabras sueltas en mayúscula (títulos, lugares, etc.)
-        const iniciaRef    = t => /^[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,},\s+[A-ZÁÉÍÓÚÑÜ]/.test(t) && /\d{4}|s\.f\./.test(t);
+        // FIX: detectar subencabezados con "Bibliografía Obligatoria:" y "Bibliografía Complementaria:"
+        const esTipoBasica = t => /(?:Bibliografía\s+)?(?:Básica|Obligatoria|Recomendada\s+Básica)/i.test(t);
+        const esTipoComp   = t => /(?:Bibliografía\s+)?(?:Complementaria|Adicional|Recomendada)/i.test(t);
+        // FIX: limpiar viñetas (•, ●, ✔, etc.) del inicio de línea
+        const limpiarL = t => t.replace(/^[\s•●\-\*✔✓►▪▸◆◉]+/, '').trim();
+        // FIX: detectar fin de sección bibliografía
+        const esFin = t => /^(?:VIII|IX|X|XI)\.\s+/i.test(t)
+            || /^SOBRE\s+INTEGRIDAD/i.test(t)
+            || /^ACAD[EÉ]MICO\s+RESPONSABLE/i.test(t)
+            || /Otros\s+materiales\s+de\s+apoyo/i.test(t);
 
         let tipoActual = 'Básica';
         let refActual  = '';
@@ -1159,10 +1167,23 @@
 
         for (let i = idxBiblio + 1; i < lineas.length; i++) {
             const l = lineas[i];
+            if (esFin(l)) { guardarRef(); break; }
             if (esTipoBasica(l)) { guardarRef(); tipoActual = 'Básica';         continue; }
             if (esTipoComp(l))   { guardarRef(); tipoActual = 'Complementaria'; continue; }
-            if (iniciaRef(l) && refActual.length > 0) guardarRef();
-            if (l.length > 5) refActual += (refActual ? ' ' : '') + l;
+
+            // FIX PRINCIPAL: usar la viñeta '•' o '●' como delimitador de referencia nueva.
+            // Marzal no tiene año en la primera línea, así que no podemos depender del año
+            // para detectar el inicio — el bullet ES el separador confiable.
+            if (/^[•●]/.test(l)) {
+                // Nueva referencia: guardar la anterior y empezar acumulando esta
+                if (refActual.length > 0) guardarRef();
+                const lc = limpiarL(l);
+                if (lc.length > 5) refActual = lc;
+            } else {
+                // Línea de continuación (ej: segunda línea de Marzal)
+                const lc = l.trim();
+                if (lc.length > 5 && refActual.length > 0) refActual += ' ' + lc;
+            }
         }
         guardarRef();
         ext_updateView();
